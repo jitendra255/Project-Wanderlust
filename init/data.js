@@ -1,3 +1,4 @@
+//DEMO DATA
 const samplelistings = [
   {
     title: "Cozy Beachfront Cottage",

@@ -14,7 +14,7 @@ module.exports.show = async (req, res) => {
     const listing = await Listing.findById(id).populate({ path: "reviews", populate: { path: "author" }, }).populate("owner");
     if (!listing) {
         req.flash("error", "Listing you requested for doesn't exist");
-        res.redirect("/listings");
+        return res.redirect("/listings");
     }
     //console.log(listing);
     res.render("./listings/show.ejs", { listing })
@@ -37,7 +37,7 @@ module.exports.edit = async (req, res) => {
     const listing = await Listing.findById(id);
     if (!listing) {
         req.flash("error", "Listing you requested for doesn't exist");
-        res.redirect("/listings");
+        return res.redirect("/listings");
     }
 
     let originalImageUrl = listing.image.url;
@@ -106,8 +106,9 @@ module.exports.search = async (req, res) => {
             populate: { path: "author" } 
         });
     
-        res.render("./listings/index.ejs", { 
+        res.render("./listings/index.ejs", {
             listings,
+            searchQuery: "",
             activeFilter: category // Pass the search term
         });
     }

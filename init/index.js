@@ -1,26 +1,28 @@
+const path = require("path")
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
 const mongoose = require("mongoose")
 const initdata = require("./data.js")
 const listing = require("../Models/listing.js")
-async function main() {
-    await mongoose.connect("mongodb://127.0.0.1:27017/wanderlust")
-}
-
-main().then(() => {
-    console.log("connected");
-
-}).catch((err) => {
-    console.log(err);
-
-})
+const User = require("../Models/user.js")
 
 const initDb = async () => {
-    await listing.deleteMany({});
-    initdata.data = initdata.data.map((obj) => ({
-        ...obj, owner: "67e8c91aed255196196a4aa9",
-    }))
-    await listing.insertMany(initdata.data)
-    console.log("data was initialised");
+    await mongoose.connect(process.env.ATLASDB_URL)
+    console.log("connected");
 
+    // ponytail: seed listings all belong to the first user in the DB. Sign up once before seeding.
+    const owner = await User.findOne();
+    if (!owner) {
+        console.error("No user in DB. Start the app, sign up once, then re-run: npm run seed");
+        process.exit(1);
+    }
+
+    await listing.deleteMany({});
+    await listing.insertMany(initdata.data.map((obj) => ({ ...obj, owner: owner._id })))
+    console.log(`data was initialised (owner: ${owner.username})`);
+    await mongoose.disconnect();
 }
 
-initDb();
+initDb().catch((err) => {
+    console.log(err);
+    process.exit(1);
+})

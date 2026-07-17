@@ -29,6 +29,11 @@ app.engine('ejs', ejsMate);
 
 const dbUrl = process.env.ATLASDB_URL;
 
+if (!dbUrl || !process.env.SECRET) {
+    console.error("Missing ATLASDB_URL or SECRET. Copy .env.example to .env and fill it in.");
+    process.exit(1);
+}
+
 async function main() {
     await mongoose.connect(dbUrl)
 }
@@ -60,7 +65,6 @@ const sessionOptions = {
     resave: false,
     saveUninitialized: true,
     cookie: {
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, 
         maxAge: 7 * 24 * 60 * 60 * 1000,
         httpOnly: true,
     }
@@ -101,7 +105,8 @@ app.use((err, req, res, next) => {
     res.status(status).render("error.ejs", { err })
 })
 
-app.listen(2000, () => {
-    console.log("Listening on port 2000");
+const port = process.env.PORT || 2000;
+app.listen(port, () => {
+    console.log(`Listening on port ${port}`);
 
 });

@@ -39,57 +39,50 @@
     .float-end{
       text-decoration: none !important;
     }
+
+    .filter-link {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .filter.active-filter {
+      opacity: 1;
+      font-weight: 600;
+    }
+
+    .filter.active-filter > div {
+      color: #fe424d;
+    }
   </style>
 
   <!-- <h3 class="mt-3">All Listings!!</h3> -->
   <!-- <form action="/listings/new" method="get">
         <button>Create a new listing</button>
     </form> -->
+  <%
+    const filterCategories = [
+      { icon: "fa-fire", label: "Trending" },
+      { icon: "fa-bed", label: "Rooms" },
+      { icon: "fa-mountain", label: "Mountain Cities" },
+      { icon: "fa-mountain-city", label: "Iconic Cities" },
+      { icon: "fa-fort-awesome", label: "Castles" },
+      { icon: "fa-person-swimming", label: "Pools" },
+      { icon: "fa-campground", label: "Camping" },
+      { icon: "fa-cow", label: "Farms" },
+      { icon: "fa-snowflake", label: "Arctic" },
+      { icon: "fa-landmark-dome", label: "Domes" },
+      { icon: "fa-sailboat", label: "Boats" },
+    ];
+  %>
   <div id="filters">
-    <div class="filter">
-      <div><i class="fa-solid fa-fire"></i></div>
-      <p>Trending</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-bed"></i></div>
-      <p>Rooms</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-mountain"></i></div>
-      <p>Mountain Cities</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-mountain-city"></i></div>
-      <p>Iconic Cities</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-fort-awesome"></i></div>
-      <p>Castles</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-person-swimming"></i></div>
-      <p>Pools</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-campground"></i></div>
-      <p>Camping</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-cow"></i></div>
-      <p>Farms</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-snowflake"></i></div>
-      <p>Arctic</p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-landmark-dome"></i></div>
-      <p>Domes</Det></p>
-    </div>
-    <div class="filter">
-      <div><i class="fa-solid fa-sailboat"></i></div>
-      <p>Boats</p>
-    </div>
+    <% for (let cat of filterCategories) { %>
+      <a href="/listings/filter?category=<%= encodeURIComponent(cat.label) %>" class="filter-link">
+        <div class="filter <%= (typeof activeFilter !== "undefined" && activeFilter === cat.label) ? 'active-filter' : '' %>">
+          <div><i class="fa-solid <%= cat.icon %>"></i></div>
+          <p><%= cat.label %></p>
+        </div>
+      </a>
+    <% } %>
     <div class="tax-toggle">
       <div class="form-check-reverse form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault">
@@ -103,6 +96,16 @@
       Showing results for: <strong><%= searchQuery %></strong>
       <a href="/listings" class="float-end">Show all listings</a>
     </div>
+  <% } %>
+
+  <% if(typeof activeFilter !== "undefined" && activeFilter) { %>
+    <div class="alert alert-info">
+      Showing category: <strong><%= activeFilter %></strong>
+      <a href="/listings" class="float-end">Show all listings</a>
+    </div>
+    <% if(!listings.length) { %>
+      <div class="alert alert-warning">No listings found in this category yet.</div>
+    <% } %>
   <% } %>
 
   <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">

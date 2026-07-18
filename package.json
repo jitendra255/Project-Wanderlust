@@ -4,7 +4,7 @@
   },
   "name": "wanderlust",
   "version": "1.0.0",
-  "description": "An accommodation listing platform for travellers - browse and search stays, publish listings with photos, and leave star-rated reviews.",
+  "description": "A student-maintained campus directory for MBM University, Jodhpur - hostels, PGs, messes and shops near campus, with distances, prices and reviews.",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",

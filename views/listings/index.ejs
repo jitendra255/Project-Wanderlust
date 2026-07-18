@@ -92,10 +92,17 @@
     }
   </style>
 
-  <!-- <h3 class="mt-3">All Listings!!</h3> -->
-  <!-- <form action="/listings/new" method="get">
-        <button>Create a new listing</button>
-    </form> -->
+  <div class="d-flex align-items-start flex-wrap mt-3 mb-1">
+    <div class="me-auto">
+      <h4 class="mb-1">Near <%= campus.shortName %></h4>
+      <p class="meta mb-0">
+        Hostels, messes, food and everyday shops around <%= campus.area %> &mdash;
+        sorted by how far they are from the campus gate.
+      </p>
+    </div>
+    <a href="/listings/new" class="btn btn-danger btn-sm mt-1">Add a place</a>
+  </div>
+
   <%
     const filterCategories = categories;
 

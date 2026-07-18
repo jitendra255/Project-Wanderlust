@@ -292,6 +292,51 @@ describe("accounts", () => {
     });
 });
 
+describe("listing map", () => {
+    test("every seeded listing carries a valid GeoJSON point", async () => {
+        const all = await Listing.find({});
+        expect(all).toHaveLength(TOTAL);
+        for (const listing of all) {
+            expect(listing.geometry.type).toBe("Point");
+            const [lng, lat] = listing.geometry.coordinates;
+            expect(lng).toBeGreaterThanOrEqual(-180);
+            expect(lng).toBeLessThanOrEqual(180);
+            expect(lat).toBeGreaterThanOrEqual(-90);
+            expect(lat).toBeLessThanOrEqual(90);
+        }
+    });
+
+    test("the show page renders a map container with coordinates", async () => {
+        const res = await request(app).get(`/listings/${castleId}`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('id="listing-map"');
+        expect(res.text).toContain("Where you'll be");
+        // Scottish Highlands
+        expect(res.text).toContain('data-lat="57.4778"');
+        expect(res.text).toContain('data-lng="-4.2026"');
+    });
+
+    test("a listing without coordinates renders no map", async () => {
+        const owner = await User.findOne({ username: "tester" });
+        const mapless = await Listing.create({
+            title: "Listing With No Coordinates",
+            description: "No geometry on purpose",
+            image: { url: "https://example.com/x.jpg", filename: "x" },
+            price: 100,
+            location: "Nowhere",
+            country: "Nowhereland",
+            owner: owner._id,
+        });
+
+        const res = await request(app).get(`/listings/${mapless._id}`);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain("Listing With No Coordinates");
+        expect(res.text).not.toContain('id="listing-map"');
+
+        await Listing.findByIdAndDelete(mapless._id);
+    });
+});
+
 describe("profile page", () => {
     const loginAs = async (username, password) => {
         const agent = request.agent(app);

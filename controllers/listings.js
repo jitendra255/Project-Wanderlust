@@ -1,4 +1,5 @@
 const Listing = require("../Models/listing.js");
+const { geocode } = require("../utils/geocode.js");
 
 // 9 per page keeps whole rows in the 3-column grid.
 const PAGE_SIZE = 9;
@@ -67,6 +68,11 @@ module.exports.create = async (req, res, next) => {
     const newListing = new Listing(req.body.listing); //listing ya object hogya to apn ek saath pura object utha rhe h instead ki alag alag fields bharke add kre new listing
     newListing.owner = req.user._id;
     newListing.image = { url, filename };
+
+    // Best-effort: no coordinates just means the show page renders without a map.
+    const point = await geocode(newListing.location, newListing.country);
+    if (point) newListing.geometry = point;
+
     await newListing.save();
     req.flash("success", "New Listing Created!")
     res.redirect("/listings");
@@ -87,7 +93,15 @@ module.exports.edit = async (req, res) => {
 
 module.exports.update = async (req, res) => {
     let { id } = req.params;
+    // findByIdAndUpdate returns the pre-update document, which lets us tell
+    // whether the address actually changed before spending a geocode call.
     let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+
+    const { location, country } = req.body.listing;
+    if (location !== listing.location || country !== listing.country) {
+        const point = await geocode(location, country);
+        if (point) await Listing.findByIdAndUpdate(id, { geometry: point });
+    }
 
     if (typeof req.file !== "undefined") {
         let url = req.file.path;

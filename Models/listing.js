@@ -35,7 +35,18 @@ const listingSchema = new mongoose.Schema({
     category: {
         type: String,
         enum: ["Trending", "Rooms", "Mountain Cities", "Iconic Cities", "Castles", "Pools", "Camping", "Farms", "Arctic", "Domes", "Boats"],
-    }
+    },
+    // GeoJSON Point. Optional - geocoding can fail or be unavailable, and a
+    // listing without coordinates simply renders without a map.
+    geometry: {
+        type: {
+            type: String,
+            enum: ["Point"],
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude] - GeoJSON order
+        },
+    },
 })
 
 listingSchema.post("findOneAndDelete", async (listing) => {       //when we delete a listing it's review should also get deleted.

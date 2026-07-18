@@ -11,6 +11,7 @@ const samplelistings = [
     location: "Malibu",
     country: "United States",
     category: "Trending",
+    geometry: { type: "Point", coordinates: [-118.7798, 34.0259] },
   },
   {
     title: "Modern Loft in Downtown",
@@ -23,6 +24,7 @@ const samplelistings = [
     location: "New York City",
     country: "United States",
     category: "Rooms",
+    geometry: { type: "Point", coordinates: [-74.006, 40.7128] },
   },
   {
     title: "Mountain Retreat",
@@ -35,6 +37,7 @@ const samplelistings = [
     location: "Aspen",
     country: "United States",
     category: "Mountain Cities",
+    geometry: { type: "Point", coordinates: [-106.8175, 39.1911] },
   },
   {
     title: "Historic Villa in Tuscany",
@@ -47,6 +50,7 @@ const samplelistings = [
     location: "Florence",
     country: "Italy",
     category: "Iconic Cities",
+    geometry: { type: "Point", coordinates: [11.2558, 43.7696] },
   },
   {
     title: "Secluded Treehouse Getaway",
@@ -59,6 +63,7 @@ const samplelistings = [
     location: "Portland",
     country: "United States",
     category: "Camping",
+    geometry: { type: "Point", coordinates: [-122.6784, 45.5152] },
   },
   {
     title: "Beachfront Paradise",
@@ -71,6 +76,7 @@ const samplelistings = [
     location: "Cancun",
     country: "Mexico",
     category: "Trending",
+    geometry: { type: "Point", coordinates: [-86.8515, 21.1619] },
   },
   {
     title: "Rustic Cabin by the Lake",
@@ -83,6 +89,7 @@ const samplelistings = [
     location: "Lake Tahoe",
     country: "United States",
     category: "Camping",
+    geometry: { type: "Point", coordinates: [-120.0324, 39.0968] },
   },
   {
     title: "Luxury Penthouse with City Views",
@@ -95,6 +102,7 @@ const samplelistings = [
     location: "Los Angeles",
     country: "United States",
     category: "Rooms",
+    geometry: { type: "Point", coordinates: [-118.2437, 34.0522] },
   },
   {
     title: "Ski-In/Ski-Out Chalet",
@@ -107,6 +115,7 @@ const samplelistings = [
     location: "Verbier",
     country: "Switzerland",
     category: "Arctic",
+    geometry: { type: "Point", coordinates: [7.2286, 46.0961] },
   },
   {
     title: "Safari Lodge in the Serengeti",
@@ -119,6 +128,7 @@ const samplelistings = [
     location: "Serengeti National Park",
     country: "Tanzania",
     category: "Farms",
+    geometry: { type: "Point", coordinates: [34.8333, -2.3333] },
   },
   {
     title: "Historic Canal House",
@@ -131,6 +141,7 @@ const samplelistings = [
     location: "Amsterdam",
     country: "Netherlands",
     category: "Iconic Cities",
+    geometry: { type: "Point", coordinates: [4.9041, 52.3676] },
   },
   {
     title: "Private Island Retreat",
@@ -143,6 +154,7 @@ const samplelistings = [
     location: "Fiji",
     country: "Fiji",
     category: "Boats",
+    geometry: { type: "Point", coordinates: [178.065, -17.7134] },
   },
   {
     title: "Charming Cottage in the Cotswolds",
@@ -155,6 +167,7 @@ const samplelistings = [
     location: "Cotswolds",
     country: "United Kingdom",
     category: "Farms",
+    geometry: { type: "Point", coordinates: [-1.9, 51.833] },
   },
   {
     title: "Historic Brownstone in Boston",
@@ -167,6 +180,7 @@ const samplelistings = [
     location: "Boston",
     country: "United States",
     category: "Iconic Cities",
+    geometry: { type: "Point", coordinates: [-71.0589, 42.3601] },
   },
   {
     title: "Beachfront Bungalow in Bali",
@@ -179,6 +193,7 @@ const samplelistings = [
     location: "Bali",
     country: "Indonesia",
     category: "Pools",
+    geometry: { type: "Point", coordinates: [115.092, -8.4095] },
   },
   {
     title: "Mountain View Cabin in Banff",
@@ -191,6 +206,7 @@ const samplelistings = [
     location: "Banff",
     country: "Canada",
     category: "Mountain Cities",
+    geometry: { type: "Point", coordinates: [-115.5708, 51.1784] },
   },
   {
     title: "Art Deco Apartment in Miami",
@@ -203,6 +219,7 @@ const samplelistings = [
     location: "Miami",
     country: "United States",
     category: "Rooms",
+    geometry: { type: "Point", coordinates: [-80.1918, 25.7617] },
   },
   {
     title: "Tropical Villa in Phuket",
@@ -215,6 +232,7 @@ const samplelistings = [
     location: "Phuket",
     country: "Thailand",
     category: "Pools",
+    geometry: { type: "Point", coordinates: [98.3381, 7.8804] },
   },
   {
     title: "Historic Castle in Scotland",
@@ -227,6 +245,7 @@ const samplelistings = [
     location: "Scottish Highlands",
     country: "United Kingdom",
     category: "Castles",
+    geometry: { type: "Point", coordinates: [-4.2026, 57.4778] },
   },
   {
     title: "Desert Oasis in Dubai",
@@ -239,6 +258,7 @@ const samplelistings = [
     location: "Dubai",
     country: "United Arab Emirates",
     category: "Pools",
+    geometry: { type: "Point", coordinates: [55.2708, 25.2048] },
   },
   {
     title: "Rustic Log Cabin in Montana",
@@ -251,6 +271,7 @@ const samplelistings = [
     location: "Montana",
     country: "United States",
     category: "Camping",
+    geometry: { type: "Point", coordinates: [-110.3626, 46.8797] },
   },
   {
     title: "Beachfront Villa in Greece",
@@ -263,6 +284,7 @@ const samplelistings = [
     location: "Mykonos",
     country: "Greece",
     category: "Domes",
+    geometry: { type: "Point", coordinates: [25.3289, 37.4467] },
   },
   {
     title: "Eco-Friendly Treehouse Retreat",
@@ -275,6 +297,7 @@ const samplelistings = [
     location: "Costa Rica",
     country: "Costa Rica",
     category: "Camping",
+    geometry: { type: "Point", coordinates: [-83.7534, 9.7489] },
   },
   {
     title: "Historic Cottage in Charleston",
@@ -287,6 +310,7 @@ const samplelistings = [
     location: "Charleston",
     country: "United States",
     category: "Iconic Cities",
+    geometry: { type: "Point", coordinates: [-79.9311, 32.7765] },
   },
   {
     title: "Modern Apartment in Tokyo",
@@ -299,6 +323,7 @@ const samplelistings = [
     location: "Tokyo",
     country: "Japan",
     category: "Iconic Cities",
+    geometry: { type: "Point", coordinates: [139.6503, 35.6762] },
   },
   {
     title: "Lakefront Cabin in New Hampshire",
@@ -311,6 +336,7 @@ const samplelistings = [
     location: "New Hampshire",
     country: "United States",
     category: "Camping",
+    geometry: { type: "Point", coordinates: [-71.5724, 43.1939] },
   },
   {
     title: "Luxury Villa in the Maldives",
@@ -323,6 +349,7 @@ const samplelistings = [
     location: "Maldives",
     country: "Maldives",
     category: "Boats",
+    geometry: { type: "Point", coordinates: [73.2207, 3.2028] },
   },
   {
     title: "Ski Chalet in Aspen",
@@ -335,6 +362,7 @@ const samplelistings = [
     location: "Aspen",
     country: "United States",
     category: "Arctic",
+    geometry: { type: "Point", coordinates: [-106.8175, 39.1911] },
   },
   {
     title: "Secluded Beach House in Costa Rica",
@@ -347,6 +375,7 @@ const samplelistings = [
     location: "Costa Rica",
     country: "Costa Rica",
     category: "Trending",
+    geometry: { type: "Point", coordinates: [-85.6024, 9.9281] },
   }
 ];
 

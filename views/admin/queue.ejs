@@ -1,0 +1,134 @@
+<% layout("/layouts/boilerplate") -%>
+  <style>
+    .queue-card {
+      border-left: 4px solid #ffc107;
+    }
+
+    .queue-meta {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+
+    .queue-field {
+      font-size: 0.9rem;
+    }
+
+    .queue-field dt {
+      color: #6c757d;
+      font-weight: 500;
+    }
+  </style>
+
+  <div class="row mt-4">
+    <div class="col-10 offset-1">
+
+      <div class="d-flex align-items-center mb-1">
+        <h3 class="mb-0 me-auto">Moderation queue</h3>
+        <a href="/listings" class="btn btn-sm btn-outline-dark">Back to directory</a>
+      </div>
+      <p class="queue-meta mb-4">
+        Submissions describe real local businesses, so each one is checked before it goes public.
+        <% if (unverified) { %>
+          <br><%= unverified %> approved <%= unverified === 1 ? "entry is" : "entries are" %>
+          still unverified (imported from OpenStreetMap) &mdash; open one to confirm its details.
+        <% } %>
+      </p>
+
+      <% if (!pending.length) { %>
+        <div class="alert alert-light border text-center py-5">
+          <p class="mb-0">Nothing waiting for review. 🎉</p>
+        </div>
+      <% } else { %>
+        <p class="fw-bold"><%= pending.length %> awaiting review</p>
+
+        <% for (let item of pending) { %>
+          <div class="card queue-card mb-3">
+            <div class="card-body">
+              <div class="d-flex align-items-start">
+                <div class="me-auto">
+                  <h5 class="mb-1"><%= item.title %></h5>
+                  <p class="queue-meta mb-2">
+                    <span class="badge bg-secondary"><%= item.category %></span>
+                    submitted by <strong>@<%= item.owner ? item.owner.username : "unknown" %></strong>
+                    on <%= new Date(item.createdAt).toISOString().slice(0, 10) %>
+                  </p>
+                </div>
+                <% if (item.image && item.image.url) { %>
+                  <img src="<%= item.image.url %>" alt="" style="width: 7rem; height: 5rem; object-fit: cover;"
+                    class="rounded ms-3">
+                <% } %>
+              </div>
+
+              <p class="mb-2"><%= item.description %></p>
+
+              <dl class="row queue-field mb-3">
+                <dt class="col-sm-3">Where</dt>
+                <dd class="col-sm-9">
+                  <%= item.location %><% if (item.landmark) { %> &middot; near <%= item.landmark %><% } %>
+                  <% if (item.distanceFromCampus != null) { %>
+                    <span class="text-muted">(<%= formatDistance(item.distanceFromCampus) %> from campus)</span>
+                  <% } else { %>
+                    <span class="text-danger">(no coordinates &mdash; geocoding failed)</span>
+                  <% } %>
+                </dd>
+
+                <% if (item.price) { %>
+                  <dt class="col-sm-3">Price</dt>
+                  <dd class="col-sm-9">&#8377;<%= item.price.toLocaleString("en-IN") %> <%= item.priceUnit %>
+                    <% if (item.deposit) { %> &middot; deposit &#8377;<%= item.deposit.toLocaleString("en-IN") %><% } %>
+                  </dd>
+                <% } %>
+
+                <% if (item.phone || item.whatsapp) { %>
+                  <dt class="col-sm-3">Contact</dt>
+                  <dd class="col-sm-9">
+                    <%= item.phone || "" %>
+                    <% if (item.whatsapp) { %> &middot; WhatsApp <%= item.whatsapp %><% } %>
+                  </dd>
+                <% } %>
+
+                <% if (item.timings) { %>
+                  <dt class="col-sm-3">Timings</dt>
+                  <dd class="col-sm-9"><%= item.timings %></dd>
+                <% } %>
+
+                <% if (item.gender) { %>
+                  <dt class="col-sm-3">For</dt>
+                  <dd class="col-sm-9"><%= item.gender %></dd>
+                <% } %>
+
+                <% if (item.vegOnly) { %>
+                  <dt class="col-sm-3">Diet</dt>
+                  <dd class="col-sm-9">Pure veg</dd>
+                <% } %>
+              </dl>
+
+              <div class="d-flex gap-2">
+                <form method="post" action="/admin/listings/<%= item._id %>/approve">
+                  <button class="btn btn-sm btn-success">Approve &amp; publish</button>
+                </form>
+                <form method="post" action="/admin/listings/<%= item._id %>/reject"
+                  onsubmit="return confirm('Reject this submission?');">
+                  <button class="btn btn-sm btn-outline-danger">Reject</button>
+                </form>
+                <a href="/listings/<%= item._id %>/edit" class="btn btn-sm btn-outline-dark">Edit first</a>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      <% } %>
+
+      <% if (recentlyRejected.length) { %>
+        <h5 class="mt-5 mb-2">Recently rejected</h5>
+        <ul class="list-unstyled queue-meta">
+          <% for (let item of recentlyRejected) { %>
+            <li class="mb-1">
+              <s><%= item.title %></s> &middot; <%= item.category %>
+              &middot; by @<%= item.owner ? item.owner.username : "unknown" %>
+            </li>
+          <% } %>
+        </ul>
+      <% } %>
+
+    </div>
+  </div>

@@ -53,6 +53,19 @@ module.exports.validatereview = (req, res, next) => {
     }
 }
 
+module.exports.isAdmin = (req, res, next) => {
+    if (!req.isAuthenticated()) {
+        req.session.redirectUrl = req.originalUrl;
+        req.flash("error", "Log in to proceed further");
+        return res.redirect("/login");
+    }
+    if (!req.user.isAdmin) {
+        req.flash("error", "You don't have access to that page");
+        return res.redirect("/listings");
+    }
+    next();
+}
+
 module.exports.isBookingGuest = async (req, res, next) => {
     const Booking = require("./Models/booking.js");
     const { bookingId } = req.params;

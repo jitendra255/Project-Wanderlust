@@ -19,14 +19,19 @@ const listingRouter = require("./routes/listing.js")
 const reviewRouter = require("./routes/review.js")
 const userRouter = require("./routes/user.js")
 const bookingRouter = require("./routes/booking.js")
+const adminRouter = require("./routes/admin.js")
 
 
 const { CATEGORIES } = require("./utils/categories.js")
+const { CAMPUS, formatDistance } = require("./utils/campus.js")
 
 app.set("view engine", "ejs")
 app.set("views", path.join(__dirname, "views"));
-// Available to every view: the filter bar and the create/edit forms.
+// Available to every view: the filter bar, the submit/edit forms, and the
+// "x m from campus" labels that appear on nearly every page.
 app.locals.categories = CATEGORIES;
+app.locals.campus = CAMPUS;
+app.locals.formatDistance = formatDistance;
 app.use(express.static(path.join(__dirname, "/public")))
 app.use(express.urlencoded({ extended: true }))
 app.use(methodoverride("_method"))
@@ -96,6 +101,7 @@ app.use((req, res, next) => {
 app.use("/listings", listingRouter);
 app.use("/listings/:id/reviews", reviewRouter);
 app.use("/listings/:id/bookings", bookingRouter);
+app.use("/admin", adminRouter);
 app.use("/", userRouter);
 
 

@@ -7,22 +7,43 @@ const { todayUtc, formatDay } = require("../utils/dates.js");
 const PAGE_SIZE = 9;
 
 // Search and category filter are independent and compose - either, both, or neither.
-function buildListingQuery({ location, category }) {
-    const query = {};
+// Only approved entries are ever public; pending submissions live in the admin queue.
+function buildListingQuery({ location, category, vegOnly, gender }) {
+    const query = { status: "approved" };
+
     if (category) {
         query.category = { $regex: category, $options: "i" };
     }
     if (location) {
         query.$or = [
+            { title: { $regex: location, $options: "i" } },
             { location: { $regex: location, $options: "i" } },
-            { country: { $regex: location, $options: "i" } },
+            { landmark: { $regex: location, $options: "i" } },
         ];
+    }
+    if (vegOnly) {
+        query.vegOnly = true;
+    }
+    if (gender) {
+        query.gender = gender;
     }
     return query;
 }
 
+// Nearest-first is the only sensible default for a campus directory.
+const SORTS = {
+    distance: { distanceFromCampus: 1 },
+    priceLow: { price: 1 },
+    priceHigh: { price: -1 },
+    newest: { createdAt: -1 },
+};
+
 async function renderListings(req, res, { location = "", category = "" }) {
-    const query = buildListingQuery({ location, category });
+    const vegOnly = req.query.veg === "1";
+    const gender = req.query.gender || "";
+    const sortKey = SORTS[req.query.sort] ? req.query.sort : "distance";
+
+    const query = buildListingQuery({ location, category, vegOnly, gender });
 
     const total = await Listing.countDocuments(query);
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -30,7 +51,7 @@ async function renderListings(req, res, { location = "", category = "" }) {
     const page = Math.min(Math.max(1, parseInt(req.query.page, 10) || 1), totalPages);
 
     const listings = await Listing.find(query)
-        .sort({ _id: 1 })
+        .sort(SORTS[sortKey])
         .skip((page - 1) * PAGE_SIZE)
         .limit(PAGE_SIZE)
         .populate("owner");
@@ -39,6 +60,9 @@ async function renderListings(req, res, { location = "", category = "" }) {
         listings,
         searchQuery: location,
         activeFilter: category,
+        vegOnly,
+        gender,
+        sortKey,
         pagination: { page, totalPages, total, pageSize: PAGE_SIZE },
     });
 }
@@ -76,19 +100,40 @@ module.exports.show = async (req, res) => {
 }
 
 module.exports.create = async (req, res, next) => {
-    //let {title,description,image,price,country,location}=req.body;
-    let url = req.file.path;
-    let filename = req.file.filename;
-    const newListing = new Listing(req.body.listing); //listing ya object hogya to apn ek saath pura object utha rhe h instead ki alag alag fields bharke add kre new listing
+    const newListing = new Listing(req.body.listing);
     newListing.owner = req.user._id;
-    newListing.image = { url, filename };
+    newListing.source = "student";
 
-    // Best-effort: no coordinates just means the show page renders without a map.
-    const point = await geocode(newListing.location, newListing.country);
+    // A photo is optional - plenty of good messes have nothing to photograph.
+    if (req.file) {
+        newListing.image = { url: req.file.path, filename: req.file.filename };
+    }
+
+    // Checkbox arrives as "on" when ticked and is absent otherwise.
+    newListing.vegOnly = Boolean(req.body.listing.vegOnly);
+
+    // Best-effort: no coordinates just means the page renders without a map.
+    const point = await geocode(
+        [newListing.landmark, newListing.location].filter(Boolean).join(", "),
+        "Jodhpur, Rajasthan, India"
+    );
     if (point) newListing.geometry = point;
 
+    // Entries describe real businesses, so a human checks them before they go
+    // public. Admins are trusted and skip the queue.
+    const trusted = req.user.isAdmin === true;
+    newListing.status = trusted ? "approved" : "pending";
+    newListing.verified = trusted;
+    if (trusted) newListing.verifiedAt = new Date();
+
     await newListing.save();
-    req.flash("success", "New Listing Created!")
+
+    if (trusted) {
+        req.flash("success", "Place added.");
+        return res.redirect(`/listings/${newListing._id}`);
+    }
+
+    req.flash("success", "Thanks! Your submission is pending review and will appear once approved.");
     res.redirect("/listings");
 }
 

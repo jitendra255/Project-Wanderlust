@@ -14,6 +14,8 @@ Cloudinary for image hosting, and session-based auth via Passport.
   Deleting a listing cascades to its reviews.
 - **Image upload** — listing photos stored on Cloudinary via `multer`.
 - **Search** — case-insensitive match on location or country.
+- **Category filter** — 11 categories (Trending, Rooms, Castles, Pools, Camping…)
+  filter the grid, with an active-filter banner and empty state.
 - **Sessions** — persisted in MongoDB, so logins survive a server restart.
 - **Flash messages** — success/error feedback on every action.
 
@@ -101,6 +103,7 @@ in the database.
 | `npm run dev` | Local MongoDB + auto-seed + server. Zero config. |
 | `npm start` | Server only. Needs a filled-in `.env`. |
 | `npm run seed` | Reset listings to the 29 samples. Needs an existing user. |
+| `npm test` | Run the Jest suite against an in-memory MongoDB. Zero config. |
 
 ## Project structure
 
@@ -116,6 +119,7 @@ controllers/        Route handlers
 views/              EJS templates (listings, users, includes, layouts)
 public/             Static CSS and client JS
 init/               Seed script and sample data
+tests/              Jest + supertest route tests
 ```
 
 ## Routes
@@ -124,6 +128,7 @@ init/               Seed script and sample data
 |---|---|---|---|
 | GET | `/listings` | — | All listings |
 | GET | `/listings/search?location=` | — | Search by location or country |
+| GET | `/listings/filter?category=` | — | Filter listings by category |
 | GET | `/listings/new` | required | New listing form |
 | POST | `/listings` | required | Create listing |
 | GET | `/listings/:id` | — | Listing detail + reviews |
@@ -136,14 +141,23 @@ init/               Seed script and sample data
 | GET/POST | `/login` | — | Log in |
 | GET | `/logout` | — | Log out |
 
+## Tests
+
+```bash
+npm test
+```
+
+Jest + supertest drive the real Express app against a throwaway in-memory MongoDB —
+no `.env` and no running server required. The suite covers every category filter,
+search, auth guards, the signup/login flows, and error handling.
+
 ## Known limitations
 
-- **Category filter is not wired up.** The `/listings/filter` route works, but the
-  category icons on the listings page have no links, and the sample data has no
-  `category` values — so it returns nothing. Needs both to be connected.
-- **Dependency vulnerabilities.** `npm audit` reports known issues. `npm audit fix`
-  clears most; upgrading `cloudinary` v1 → v2 is a breaking change.
-- **No test suite.**
+- **Dependency vulnerabilities.** Two high-severity advisories remain, both rooted in
+  `cloudinary` v1. Clearing them requires the breaking v1 → v2 upgrade, which also
+  affects `multer-storage-cloudinary`.
+- **Image upload needs Cloudinary keys.** Without them, creating a listing with a
+  photo fails; every other feature works.
 
 ## Deployment notes
 

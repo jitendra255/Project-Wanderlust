@@ -1,0 +1,32 @@
+# Render blueprint. In the Render dashboard: New > Blueprint, point it at this
+# repo, then fill in the secret values below (they are deliberately not stored
+# in this file).
+services:
+  - type: web
+    name: wanderlust
+    runtime: node
+    plan: free
+    region: oregon
+
+    # Skip devDependencies: jest/supertest are not needed at runtime, and
+    # mongodb-memory-server's postinstall downloads a MongoDB binary that would
+    # slow every build down for nothing.
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+
+    healthCheckPath: /listings
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # sync: false means "prompt me in the dashboard" - never commit these.
+      - key: ATLASDB_URL
+        sync: false
+      - key: SECRET
+        sync: false
+      - key: CLOUD_NAME
+        sync: false
+      - key: CLOUD_API_KEY
+        sync: false
+      - key: CLOUD_API_SECRET
+        sync: false

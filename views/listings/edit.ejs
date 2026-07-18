@@ -43,6 +43,18 @@
                         required>
                     <div class="invalid-feedback">Location should be valid!</div>
                 </div>
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="listing[category]" id="category" class="form-select" required>
+                        <option value="" disabled <%= listing.category ? "" : "selected" %>>Choose a category</option>
+                        <% for (let category of categories) { %>
+                            <option value="<%= category.label %>" <%= listing.category === category.label ? "selected" : "" %>>
+                                <%= category.label %>
+                            </option>
+                        <% } %>
+                    </select>
+                    <div class="invalid-feedback">Please pick a category!</div>
+                </div>
                 <button class="btn btn-dark add-btn mt-3">Edit</button>
                 <br>
                 <br>

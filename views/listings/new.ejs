@@ -41,6 +41,17 @@
                     <div class="invalid-feedback">Location should be valid!</div>
                 </div>
 
+                <div class="mb-3">
+                    <lable for="category" class="form-label">Category</lable>
+                    <select name="listing[category]" id="category" class="form-select" required>
+                        <option value="" disabled selected>Choose a category</option>
+                        <% for (let category of categories) { %>
+                            <option value="<%= category.label %>"><%= category.label %></option>
+                        <% } %>
+                    </select>
+                    <div class="invalid-feedback">Please pick a category!</div>
+                </div>
+
                 <br>
                 <br>
                 <button class="btn btn-dark add-btn mt-3">Add</button>

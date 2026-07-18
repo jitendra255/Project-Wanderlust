@@ -1,6 +1,7 @@
 const { ref } = require("joi");
 const mongoose = require("mongoose")
 const Review = require("./review.js")
+const { CATEGORY_LABELS } = require("../utils/categories.js")
 
 const listingSchema = new mongoose.Schema({
     title: {
@@ -34,7 +35,7 @@ const listingSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ["Trending", "Rooms", "Mountain Cities", "Iconic Cities", "Castles", "Pools", "Camping", "Farms", "Arctic", "Domes", "Boats"],
+        enum: CATEGORY_LABELS,
     },
     // GeoJSON Point. Optional - geocoding can fail or be unavailable, and a
     // listing without coordinates simply renders without a map.

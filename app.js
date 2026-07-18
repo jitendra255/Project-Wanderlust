@@ -20,8 +20,12 @@ const reviewRouter = require("./routes/review.js")
 const userRouter = require("./routes/user.js")
 
 
+const { CATEGORIES } = require("./utils/categories.js")
+
 app.set("view engine", "ejs")
 app.set("views", path.join(__dirname, "views"));
+// Available to every view: the filter bar and the create/edit forms.
+app.locals.categories = CATEGORIES;
 app.use(express.static(path.join(__dirname, "/public")))
 app.use(express.urlencoded({ extended: true }))
 app.use(methodoverride("_method"))

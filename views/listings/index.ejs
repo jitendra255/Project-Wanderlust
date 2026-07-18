@@ -74,19 +74,7 @@
         <button>Create a new listing</button>
     </form> -->
   <%
-    const filterCategories = [
-      { icon: "fa-fire", label: "Trending" },
-      { icon: "fa-bed", label: "Rooms" },
-      { icon: "fa-mountain", label: "Mountain Cities" },
-      { icon: "fa-mountain-city", label: "Iconic Cities" },
-      { icon: "fa-fort-awesome", label: "Castles" },
-      { icon: "fa-person-swimming", label: "Pools" },
-      { icon: "fa-campground", label: "Camping" },
-      { icon: "fa-cow", label: "Farms" },
-      { icon: "fa-snowflake", label: "Arctic" },
-      { icon: "fa-landmark-dome", label: "Domes" },
-      { icon: "fa-sailboat", label: "Boats" },
-    ];
+    const filterCategories = categories;
 
     const currentSearch = (typeof searchQuery !== "undefined" && searchQuery) ? searchQuery : "";
     const currentCategory = (typeof activeFilter !== "undefined" && activeFilter) ? activeFilter : "";

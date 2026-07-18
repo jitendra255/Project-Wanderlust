@@ -5,196 +5,281 @@
 
     <style>
         #listing-map {
-            height: 24rem;
+            height: 18rem;
             border-radius: 0.75rem;
             z-index: 0;
         }
+
+        .place-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .no-photo-lg {
+            height: 16rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f2f2f2;
+            color: #c9c9c9;
+            font-size: 4rem;
+            border-radius: 0.5rem;
+        }
+
+        .fact dt {
+            color: #6c757d;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .fact dd {
+            margin-bottom: 0.75rem;
+        }
+
+        .btn-whatsapp {
+            background-color: #25d366;
+            border-color: #25d366;
+            color: #fff;
+        }
+
+        .btn-whatsapp:hover {
+            background-color: #1da851;
+            border-color: #1da851;
+            color: #fff;
+        }
     </style>
 
-    <div class="row">
-        <div class="col-8 offset-2 mt-3">
-            <h3>
-                <%=listing.title%>
-            </h3>
-        </div>
-        <div class="card col-6 offset-2 listing-card">
-            <img src="<%=listing.image.url%>" class="card-img-top show-img" alt="listing_image">
-            <div class="card-body">
-                <p class="card-text mt-2">
-                <p class="card-text">Owned by : <%=listing.owner.username%>
-                </p>
-                <br>
-                <%=listing.description%>
-                    <br>
-                    &#8377;<%=listing.price.toLocaleString("en-IN")%>
-                        <br>
-                        <%=listing.location%>
-                            <br>
-                            <%=listing.country%>
-                                <br>
-                                </p>
-            </div>
-        </div>
-        <br>
+    <%
+        const isOwner = currUser && listing.owner && listing.owner._id.equals(currUser._id);
+        const isAdmin = currUser && currUser.isAdmin;
+        const icon = (categories.find(c => c.label === listing.category) || {}).icon || "fa-location-dot";
+        const point = listing.geometry && listing.geometry.coordinates;
+        // wa.me needs a bare international number.
+        const waNumber = (listing.whatsapp || "").replace(/[^0-9]/g, "");
+        const waLink = waNumber
+            ? `https://wa.me/${waNumber.length === 10 ? "91" + waNumber : waNumber}`
+            : null;
+    %>
 
+    <div class="row mt-3">
+        <div class="col-lg-8 offset-lg-2">
 
-    </div>
-    <% if(currUser && listing.owner._id.equals(currUser._id)) {%>
-        <div class="btns">
-            <a href="/listings/<%=listing._id%>/edit" class="btn btn-danger col-1 offset-2 mt-3">Edit</a>
-
-            <form method="post" action="/listings/<%=listing._id%>?_method=Delete">
-                <button class="btn btn-dark  offset-4 mt-3">Delete</button>
-            </form>
-        </div>
-        <% } %>
-
-            <% const isOwner = currUser && listing.owner._id.equals(currUser._id); %>
-            <hr class="col-8 offset-2">
-            <div class="col-8 offset-2 mb-3 mt-3">
-                <h4>Book this stay</h4>
-
-                <% if (!currUser) { %>
-                    <p class="text-muted">
-                        <a href="/login">Log in</a> to book this listing.
-                    </p>
-                <% } else if (isOwner) { %>
-                    <p class="text-muted">This is your listing &mdash; you can't book it yourself.</p>
+            <h3 class="mb-1"><%= listing.title %></h3>
+            <p class="place-meta mb-3">
+                <span class="badge rounded-pill text-bg-light"><%= listing.category %></span>
+                <% if (listing.distanceFromCampus != null) { %>
+                    &middot; <%= formatDistance(listing.distanceFromCampus) %> from <%= campus.shortName %>
+                <% } %>
+                <% if (listing.vegOnly) { %>
+                    &middot; <span class="badge text-bg-success">Pure veg</span>
+                <% } %>
+                <% if (listing.gender) { %>
+                    &middot; <span class="badge text-bg-secondary"><%= listing.gender %></span>
+                <% } %>
+                <% if (listing.verified) { %>
+                    &middot; <span class="badge text-bg-primary"><i class="fa-solid fa-circle-check"></i> Verified</span>
                 <% } else { %>
-                    <form action="/listings/<%= listing._id %>/bookings" method="post" class="row g-2 align-items-end">
-                        <div class="col-md-3">
-                            <label for="checkIn" class="form-label">Check in</label>
-                            <input type="date" id="checkIn" name="booking[checkIn]" class="form-control"
-                                min="<%= todayIso %>" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="checkOut" class="form-label">Check out</label>
-                            <input type="date" id="checkOut" name="booking[checkOut]" class="form-control"
-                                min="<%= todayIso %>" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="guests" class="form-label">Guests</label>
-                            <input type="number" id="guests" name="booking[guests]" class="form-control" value="1"
-                                min="1" required>
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-danger w-100">
-                                Book &middot; &#8377;<%= listing.price.toLocaleString("en-IN") %>/night
-                            </button>
-                        </div>
-                    </form>
+                    &middot; <span class="badge text-bg-warning">Unverified</span>
                 <% } %>
+            </p>
 
-                <% if (bookings && bookings.length) { %>
-                    <p class="text-muted mt-3 mb-1" style="font-size: 0.9rem;">Already booked:</p>
-                    <ul class="list-unstyled mb-0" style="font-size: 0.9rem;">
-                        <% for (let booked of bookings) { %>
-                            <li class="text-muted">
-                                &bull; <%= booked.checkIn.toISOString().slice(0, 10) %>
-                                &rarr; <%= booked.checkOut.toISOString().slice(0, 10) %>
-                            </li>
-                        <% } %>
-                    </ul>
-                <% } %>
-            </div>
-
-            <% const point = listing.geometry && listing.geometry.coordinates; %>
-            <% if (point && point.length === 2) { %>
-                <hr class="col-8 offset-2">
-                <div class="col-8 offset-2 mb-3 mt-3">
-                    <h4>Where you'll be</h4>
-                    <p class="text-muted mb-2">
-                        <%= listing.location %>, <%= listing.country %>
-                    </p>
-                    <div id="listing-map" data-lng="<%= point[0] %>" data-lat="<%= point[1] %>"
-                        data-title="<%= listing.title %>"></div>
+            <% if (!listing.verified) { %>
+                <div class="alert alert-warning py-2 place-meta">
+                    <% if (listing.source === "osm") { %>
+                        Imported from OpenStreetMap and <strong>not checked on the ground</strong>.
+                        Details may be wrong or out of date.
+                    <% } else { %>
+                        Submitted by a student and not yet verified.
+                    <% } %>
+                    Know this place? <a href="/listings/<%= listing._id %>/edit">Correct it</a>.
                 </div>
             <% } %>
 
-            <hr class="col-8 offset-2">
-            <div class="col-8 offset-2 mb-3 mt-3">
+            <% if (listing.image && listing.image.url) { %>
+                <img src="<%= listing.image.url %>" class="img-fluid rounded mb-3" alt="<%= listing.title %>"
+                    style="width: 100%; max-height: 24rem; object-fit: cover;">
+            <% } else { %>
+                <div class="no-photo-lg mb-3"><i class="fa-solid <%= icon %>"></i></div>
+            <% } %>
 
-                <% if(currUser) {%>
-                    <h4>Leave a Review</h4>
-                    <form action="/listings/<%=listing._id%>/reviews" method="post" novalidate class="needs-validation">
+            <% if (listing.description) { %>
+                <p><%= listing.description %></p>
+            <% } %>
 
-                        <div class="mb-3 mt-3">
-                            <fieldset class="starability-slot">
-                                <legend>Rating:</legend>
-                                <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="0"
-                                    checked aria-label="No rating." />
-                                <input type="radio" id="first-rate1" name="review[rating]" value="1" />
-                                <label for="first-rate1" title="Terrible">1 star</label>
-                                <input type="radio" id="first-rate2" name="review[rating]" value="2" />
-                                <label for="first-rate2" title="Not good">2 stars</label>
-                                <input type="radio" id="first-rate3" name="review[rating]" value="3" />
-                                <label for="first-rate3" title="Average">3 stars</label>
-                                <input type="radio" id="first-rate4" name="review[rating]" value="4" />
-                                <label for="first-rate4" title="Very good">4 stars</label>
-                                <input type="radio" id="first-rate5" name="review[rating]" value="5" />
-                                <label for="first-rate5" title="Amazing">5 stars</label>
-                            </fieldset>
-                        </div>
-                        <div class="mb-3 mt-3">
-                            <label for="comment" class="form-label">Comment</label>
-                            <textarea name="review[comment]" id="comment" cols="30" rows="5" class="form-control"
-                                required></textarea>
-                            <div class="invalid-feedback">Please add some comment for review.</div>
-                        </div>
-                        <button class="btn btn-danger">Submit</button>
-                    </form>
-
+            <%# Contact first: it is the single most useful thing on this page. %>
+            <% if (listing.phone || waLink) { %>
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <% if (listing.phone) { %>
+                        <a href="tel:<%= listing.phone.replace(/\s/g, '') %>" class="btn btn-danger">
+                            <i class="fa-solid fa-phone"></i> <%= listing.phone %>
+                        </a>
                     <% } %>
+                    <% if (waLink) { %>
+                        <a href="<%= waLink %>" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer">
+                            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
 
-                        <% if(listing.reviews.length>0){%>
-                            <hr>
-                            <div class="row">
-                                <p class="fw-bold">All reviews</p>
-                                <%for(review of listing.reviews){ %>
-                                    <div class="card col-5 ms-3 mb-3">
-                                        <div class="card-body">
-                                            <h5 class="card-title mt-2">
-                                                @<%=review.author.username%>
-                                            </h5>
-                                            <p class="starability-result card-text" data-rating="<%=review.rating%>">
-                                            </p>
-                                            <p class="card-text">
-                                                <%=review.comment%>
-                                            </p>
+            <dl class="row fact">
+                <% if (listing.price) { %>
+                    <dt class="col-sm-3">Price</dt>
+                    <dd class="col-sm-9">
+                        &#8377;<%= listing.price.toLocaleString("en-IN") %> <%= listing.priceUnit %>
+                        <% if (listing.deposit) { %>
+                            <span class="place-meta">&middot; deposit &#8377;<%= listing.deposit.toLocaleString("en-IN") %></span>
+                        <% } %>
+                    </dd>
+                <% } %>
 
-                                        </div>
-                                        <% if(currUser && review.author._id.equals(currUser._id)) { %>
-                                            <form class="mb-3" method="post"
-                                                action="/listings/<%=listing._id %>/reviews/<%=review._id%>?_method=Delete">
-                                                <button class="btn btn-sm btn-dark mt-2">Delete</button>
-                                            </form>
-                                            <% } %>
+                <dt class="col-sm-3">Where</dt>
+                <dd class="col-sm-9">
+                    <%= listing.location %><% if (listing.landmark) { %>, near <%= listing.landmark %><% } %>
+                </dd>
 
-                                    </div>
+                <% if (listing.timings) { %>
+                    <dt class="col-sm-3">Timings</dt>
+                    <dd class="col-sm-9"><%= listing.timings %></dd>
+                <% } %>
+
+                <% if (listing.amenities && listing.amenities.length) { %>
+                    <dt class="col-sm-3">Facilities</dt>
+                    <dd class="col-sm-9">
+                        <% for (let a of listing.amenities) { %>
+                            <span class="badge rounded-pill text-bg-light"><%= a %></span>
+                        <% } %>
+                    </dd>
+                <% } %>
+
+                <dt class="col-sm-3">Added by</dt>
+                <dd class="col-sm-9">
+                    <% if (listing.source === "osm") { %>
+                        OpenStreetMap contributors
+                    <% } else { %>
+                        @<%= listing.owner ? listing.owner.username : "unknown" %>
+                    <% } %>
+                </dd>
+            </dl>
+
+            <% if (isOwner || isAdmin) { %>
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <a href="/listings/<%= listing._id %>/edit" class="btn btn-sm btn-outline-dark">Edit</a>
+                    <% if (isAdmin && !listing.verified) { %>
+                        <form method="post" action="/admin/listings/<%= listing._id %>/verify">
+                            <button class="btn btn-sm btn-primary">Mark verified</button>
+                        </form>
+                    <% } %>
+                    <form method="post" action="/listings/<%= listing._id %>?_method=Delete"
+                        onsubmit="return confirm('Delete this place? Its reviews go too.');">
+                        <button class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </div>
+            <% } %>
+
+            <% if (point && point.length === 2) { %>
+                <h5 class="mt-4">Location</h5>
+                <div id="listing-map" data-lng="<%= point[0] %>" data-lat="<%= point[1] %>"
+                    data-title="<%= listing.title %>" data-campus-lng="<%= campus.coordinates[0] %>"
+                    data-campus-lat="<%= campus.coordinates[1] %>" data-campus="<%= campus.shortName %>"></div>
+            <% } %>
+
+            <hr class="mt-4">
+
+            <% if (currUser) { %>
+                <h5>Leave a review</h5>
+                <form action="/listings/<%= listing._id %>/reviews" method="post" novalidate class="needs-validation mb-4">
+                    <div class="mb-3">
+                        <fieldset class="starability-slot">
+                            <legend class="place-meta">Your rating</legend>
+                            <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="0"
+                                checked aria-label="No rating." />
+                            <input type="radio" id="first-rate1" name="review[rating]" value="1" />
+                            <label for="first-rate1" title="Terrible">1 star</label>
+                            <input type="radio" id="first-rate2" name="review[rating]" value="2" />
+                            <label for="first-rate2" title="Not good">2 stars</label>
+                            <input type="radio" id="first-rate3" name="review[rating]" value="3" />
+                            <label for="first-rate3" title="Average">3 stars</label>
+                            <input type="radio" id="first-rate4" name="review[rating]" value="4" />
+                            <label for="first-rate4" title="Very good">4 stars</label>
+                            <input type="radio" id="first-rate5" name="review[rating]" value="5" />
+                            <label for="first-rate5" title="Amazing">5 stars</label>
+                        </fieldset>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">How was it?</label>
+                        <textarea name="review[comment]" id="comment" rows="3" class="form-control"
+                            placeholder="Food, cleanliness, value for money, how the owner behaves..." required></textarea>
+                        <div class="invalid-feedback">Please add a comment.</div>
+                    </div>
+                    <button class="btn btn-danger">Post review</button>
+                </form>
+            <% } else { %>
+                <p class="place-meta"><a href="/login">Log in</a> to leave a review.</p>
+            <% } %>
+
+            <% if (listing.reviews && listing.reviews.length) { %>
+                <h5 class="mt-4">Reviews (<%= listing.reviews.length %>)</h5>
+                <div class="row row-cols-lg-2 row-cols-1 g-3 mb-5">
+                    <% for (let review of listing.reviews) { %>
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-1">
+                                        @<%= review.author ? review.author.username : "unknown" %>
+                                    </h6>
+                                    <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>
+                                    <p class="card-text"><%= review.comment %></p>
+                                    <% if (currUser && review.author && review.author._id.equals(currUser._id)) { %>
+                                        <form method="post"
+                                            action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=Delete">
+                                            <button class="btn btn-sm btn-outline-dark">Delete</button>
+                                        </form>
                                     <% } %>
+                                </div>
                             </div>
-                            <%}%>
-            </div>
+                        </div>
+                    <% } %>
+                </div>
+            <% } else { %>
+                <p class="place-meta mb-5">No reviews yet. Be the first &mdash; it helps everyone.</p>
+            <% } %>
 
-            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-            <script>
-                (function () {
-                    const el = document.getElementById("listing-map");
-                    if (!el || !window.L) return;
+        </div>
+    </div>
 
-                    const lat = Number.parseFloat(el.dataset.lat);
-                    const lng = Number.parseFloat(el.dataset.lng);
-                    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        (function () {
+            const el = document.getElementById("listing-map");
+            if (!el || !window.L) return;
 
-                    const map = L.map(el).setView([lat, lng], 11);
+            const lat = Number.parseFloat(el.dataset.lat);
+            const lng = Number.parseFloat(el.dataset.lng);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
-                    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                        maxZoom: 19,
-                        attribution:
-                            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    }).addTo(map);
+            const map = L.map(el).setView([lat, lng], 15);
 
-                    L.marker([lat, lng]).addTo(map).bindPopup(el.dataset.title).openPopup();
-                })();
-            </script>
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            }).addTo(map);
+
+            const place = L.marker([lat, lng]).addTo(map).bindPopup(el.dataset.title);
+
+            // Show the campus too, so the distance means something visually.
+            const campusLat = Number.parseFloat(el.dataset.campusLat);
+            const campusLng = Number.parseFloat(el.dataset.campusLng);
+            if (!Number.isNaN(campusLat) && !Number.isNaN(campusLng)) {
+                L.circleMarker([campusLat, campusLng], {
+                    radius: 8, color: "#fe424d", fillColor: "#fe424d", fillOpacity: 0.9,
+                }).addTo(map).bindPopup(el.dataset.campus);
+
+                map.fitBounds(L.latLngBounds([[lat, lng], [campusLat, campusLng]]).pad(0.3));
+            }
+
+            place.openPopup();
+        })();
+    </script>

@@ -1,7 +1,7 @@
 const Listing = require("../Models/listing.js");
 const Booking = require("../Models/booking.js");
-const { geocode } = require("../utils/geocode.js");
-const { todayUtc, formatDay } = require("../utils/dates.js");
+const { geocodePlace } = require("../utils/geocode.js");
+const { distanceFromCampus } = require("../utils/campus.js");
 
 // 9 per page keeps whole rows in the 3-column grid.
 const PAGE_SIZE = 9;
@@ -83,24 +83,35 @@ module.exports.show = async (req, res) => {
         req.flash("error", "Listing you requested for doesn't exist");
         return res.redirect("/listings");
     }
-    // Upcoming confirmed stays, so the page can show what is already taken.
-    const bookings = await Booking.find({
-        listing: id,
-        status: "confirmed",
-        checkOut: { $gte: todayUtc() },
-    })
-        .sort({ checkIn: 1 })
-        .select("checkIn checkOut");
+    res.render("./listings/show.ejs", { listing })
+}
 
-    res.render("./listings/show.ejs", {
-        listing,
-        bookings,
-        todayIso: formatDay(todayUtc()), // min= for the date inputs
-    })
+// Form values need tidying before they hit the schema: facilities arrive as one
+// comma-separated string, the checkbox arrives as "on" or not at all, and empty
+// number inputs arrive as "" which Mongoose would cast to NaN.
+function normalizeSubmission(body = {}) {
+    const data = { ...body };
+
+    if (typeof data.amenities === "string") {
+        data.amenities = data.amenities
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    data.vegOnly = Boolean(data.vegOnly);
+
+    for (const field of ["price", "deposit"]) {
+        if (data[field] === "" || data[field] === undefined || data[field] === null) {
+            delete data[field];
+        }
+    }
+
+    return data;
 }
 
 module.exports.create = async (req, res, next) => {
-    const newListing = new Listing(req.body.listing);
+    const newListing = new Listing(normalizeSubmission(req.body.listing));
     newListing.owner = req.user._id;
     newListing.source = "student";
 
@@ -109,14 +120,11 @@ module.exports.create = async (req, res, next) => {
         newListing.image = { url: req.file.path, filename: req.file.filename };
     }
 
-    // Checkbox arrives as "on" when ticked and is absent otherwise.
-    newListing.vegOnly = Boolean(req.body.listing.vegOnly);
-
     // Best-effort: no coordinates just means the page renders without a map.
-    const point = await geocode(
-        [newListing.landmark, newListing.location].filter(Boolean).join(", "),
-        "Jodhpur, Rajasthan, India"
-    );
+    const point = await geocodePlace({
+        landmark: newListing.landmark,
+        location: newListing.location,
+    });
     if (point) newListing.geometry = point;
 
     // Entries describe real businesses, so a human checks them before they go
@@ -145,21 +153,33 @@ module.exports.edit = async (req, res) => {
         return res.redirect("/listings");
     }
 
-    let originalImageUrl = listing.image.url;
-    originalImageUrl = originalImageUrl.replace("/upload", "/upload/w_250")
+    // Imported entries have no photo, so guard rather than assume a URL.
+    const originalImageUrl = (listing.image && listing.image.url)
+        ? listing.image.url.replace("/upload", "/upload/w_250")
+        : "";
+
     res.render("./listings/edit.ejs", { listing, originalImageUrl })
 }
 
 module.exports.update = async (req, res) => {
     let { id } = req.params;
+    const submitted = normalizeSubmission(req.body.listing);
+
     // findByIdAndUpdate returns the pre-update document, which lets us tell
     // whether the address actually changed before spending a geocode call.
-    let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+    let listing = await Listing.findByIdAndUpdate(id, submitted);
 
-    const { location, country } = req.body.listing;
-    if (location !== listing.location || country !== listing.country) {
-        const point = await geocode(location, country);
-        if (point) await Listing.findByIdAndUpdate(id, { geometry: point });
+    if (submitted.location !== listing.location || submitted.landmark !== listing.landmark) {
+        const point = await geocodePlace({
+            landmark: submitted.landmark,
+            location: submitted.location,
+        });
+        if (point) {
+            await Listing.findByIdAndUpdate(id, {
+                geometry: point,
+                distanceFromCampus: distanceFromCampus(point.coordinates),
+            });
+        }
     }
 
     if (typeof req.file !== "undefined") {

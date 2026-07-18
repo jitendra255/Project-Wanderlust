@@ -113,7 +113,13 @@ app.all("*", (req, res, next) => {
 
 app.use((err, req, res, next) => {
     let { status = 500, message = "Something went wrong" } = err;
-    // res.status(status).send(message);
+
+    // Log server faults. Without this a 500 leaves no trace anywhere and the
+    // only symptom is a blank error page.
+    if (status >= 500) {
+        console.error(`[${req.method} ${req.originalUrl}]`, err);
+    }
+
     res.status(status).render("error.ejs", { err })
 })
 

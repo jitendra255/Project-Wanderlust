@@ -44,4 +44,31 @@ async function geocode(location, country) {
     }
 }
 
-module.exports = { geocode };
+/**
+ * Geocode a place from its landmark + area, trying progressively less specific
+ * queries. Small local landmarks ("Bhaskar Circle") often are not in Nominatim
+ * even when the surrounding area ("Ratanada") is, and falling back to the area
+ * still puts the place on the map within a few hundred metres.
+ *
+ * Deliberately stops before falling back to the city itself: a pin on the wrong
+ * side of Jodhpur is worse than no pin, because the distance-from-campus figure
+ * would look precise and be wrong.
+ */
+async function geocodePlace({ landmark, location, city = "Jodhpur", region = "Rajasthan, India" }) {
+    const suffix = [city, region].filter(Boolean).join(", ");
+
+    const candidates = [
+        [landmark, location].filter(Boolean).join(", "),
+        location,
+        landmark,
+    ].filter((query) => query && query.trim());
+
+    for (const query of candidates) {
+        const point = await geocode(query, suffix);
+        if (point) return point;
+    }
+
+    return null;
+}
+
+module.exports = { geocode, geocodePlace };

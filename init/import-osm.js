@@ -54,6 +54,26 @@ const OVERPASS_QUERY = `
 out center tags;
 `;
 
+// A name and a map pin is not evidence that a place exists, is still open, or
+// is what OSM says it is - that is how a marriage hall ends up tagged as a
+// restaurant and a tailor ends up in the food list.
+//
+// We publish an imported entry only when something corroborates it: someone
+// recorded a phone, hours, a website, a street address, a brand, or surveyed
+// the cuisine. Everything else is left out for students to add properly.
+const CORROBORATING_TAGS = [
+    ["phone", (t) => t.phone || t["contact:phone"]],
+    ["hours", (t) => t.opening_hours],
+    ["website", (t) => t.website || t["contact:website"]],
+    ["address", (t) => t["addr:street"] || t["addr:housenumber"]],
+    ["brand", (t) => t.brand || t.operator],
+    ["cuisine", (t) => t.cuisine],
+];
+
+function signalsFor(tags) {
+    return CORROBORATING_TAGS.filter(([, has]) => has(tags)).map(([name]) => name);
+}
+
 function categoryFor(tags) {
     for (const [key, category] of Object.entries(TAG_MAP)) {
         const [k, v] = key.split("=");
@@ -138,13 +158,18 @@ function toListing(element, ownerId) {
     const coordinates = coordsOf(element);
     if (!coordinates) return null;
 
+    const signals = signalsFor(tags);
+    if (signals.length === 0) return null; // nothing corroborates it - skip
+
     const phone = tags.phone || tags["contact:phone"] || undefined;
 
     return {
+        _signals: signals,
         title: tags.name,
         description:
-            `${category} near ${CAMPUS.shortName}. Imported from OpenStreetMap - ` +
-            `details are unverified. Know this place? Help by correcting it.`,
+            `${category} near ${CAMPUS.shortName}. Imported from OpenStreetMap ` +
+            `(corroborated by: ${signals.join(", ")}) but not checked on the ground. ` +
+            `Know this place? Help by correcting it.`,
         category,
         location: addressOf(tags),
         landmark: tags["addr:street"] || undefined,
@@ -214,9 +239,12 @@ function toListing(element, ownerId) {
     for (const [cat, n] of Object.entries(counts).sort((a, b) => b[1] - a[1])) {
         console.log(`    ${cat.padEnd(20)} ${n}`);
     }
-    console.log("\n  nearest 10:");
-    for (const c of unique.slice(0, 10)) {
-        console.log(`    ${formatDistance(c.distanceFromCampus).padStart(7)}  [${c.category}] ${c.title}`);
+    console.log("\n  kept (nearest first) - with what corroborates each:");
+    for (const c of unique) {
+        console.log(
+            `    ${formatDistance(c.distanceFromCampus).padStart(7)}  [${c.category.padEnd(18)}] ` +
+            `${c.title.slice(0, 42).padEnd(42)} ${c._signals.join(",")}`
+        );
     }
 
     if (!write) {
@@ -225,9 +253,21 @@ function toListing(element, ownerId) {
         return;
     }
 
+    const keepIds = unique.map((d) => d.osmId);
+
+    // Drop previously imported entries that no longer meet the bar. Verified
+    // entries and anything a student has taken over are never touched.
+    const pruned = await Listing.deleteMany({
+        source: "osm",
+        verified: false,
+        osmId: { $nin: keepIds },
+    });
+
     let inserted = 0;
     let updated = 0;
     for (const doc of unique) {
+        delete doc._signals; // reporting only, not part of the schema
+
         const existing = await Listing.findOne({ osmId: doc.osmId });
         if (existing) {
             // Never clobber details a student has corrected.
@@ -241,7 +281,7 @@ function toListing(element, ownerId) {
         }
     }
 
-    console.log(`\nImported: ${inserted} new, ${updated} refreshed.`);
+    console.log(`\nImported: ${inserted} new, ${updated} refreshed, ${pruned.deletedCount} pruned.`);
     await mongoose.disconnect();
 })().catch((err) => {
     console.error(err);

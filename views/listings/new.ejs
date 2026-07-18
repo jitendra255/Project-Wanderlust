@@ -1,61 +1,160 @@
 <% layout("/layouts/boilerplate") -%>
-    <div class="row mt-3">
-        <div class="col-8 offset-2">
-            <br>
-            <br>
-            <h3>Add a New Listing</h3>
-            <form action="/listings" method="post" novalidate class="needs-validation" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <lable for="title" class="form-label" >Title</lable>
-                    <input type="text" name="listing[title]" placeholder="enter title" class="form-control" required>
-                    <div class="valid-feedback">Title looks good!</div>
-                </div>
-                <div class="mb-3">
-                    <lable for="description" class="form-label">Description</lable>
-                    <textarea type="text" name="listing[description]" class="form-control" required>
-                    </textarea>
-                    <div class="invalid-feedback">Please enter a short description!</div>
-                </div>
-                <div class="mb-3">
-                    <lable for="image" class="form-label">Upload Image</lable>
-                    <input type="file" name="listing[image]"  class="form-control" required>
-                </div>
-                
-                <div class="row">
-                    <div class="mb-3 col-md-4">
-                        <lable for="number" class="form-label">Price</lable>
-                        <input  name="listing[price]" placeholder="enter price" class="form-control" required>
-                        <div class="invalid-feedback">Price should be valid!</div>
-                    </div>
+    <style>
+        .form-hint {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
 
-                    <div class="mb-3 col-md-8">
-                        <lable for="country" class="form-label">Country</lable>
-                        <input type="text" name="listing[country]" placeholder="enter country" class="form-control" required>
-                    </div>
-                    <div class="invalid-feedback">Country name should be valid!</div>
-                </div>
+        .section-head {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            margin-top: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+
+    <div class="row mt-4">
+        <div class="col-lg-8 offset-lg-2">
+            <h3 class="mb-1">Add a place near <%= campus.shortName %></h3>
+            <p class="form-hint mb-4">
+                Know a good mess, hostel or chai spot? Add it here. Only the first three fields are
+                required &mdash; fill in whatever you know, someone else can complete the rest.
+                Submissions are reviewed before they appear publicly.
+            </p>
+
+            <form action="/listings" method="post" novalidate class="needs-validation"
+                enctype="multipart/form-data">
 
                 <div class="mb-3">
-                    <lable for="location" class="form-label">Location</lable>
-                    <input type="text" name="listing[location]" placeholder="enter location" class="form-control" required>
-                    <div class="invalid-feedback">Location should be valid!</div>
+                    <label for="title" class="form-label">Name of the place *</label>
+                    <input type="text" id="title" name="listing[title]" class="form-control"
+                        placeholder="e.g. Sharma Mess, Gupta Boys Hostel" required>
+                    <div class="invalid-feedback">Please give it a name.</div>
                 </div>
 
                 <div class="mb-3">
-                    <lable for="category" class="form-label">Category</lable>
+                    <label for="category" class="form-label">What kind of place is it? *</label>
                     <select name="listing[category]" id="category" class="form-select" required>
-                        <option value="" disabled selected>Choose a category</option>
+                        <option value="" disabled selected>Choose one</option>
                         <% for (let category of categories) { %>
                             <option value="<%= category.label %>"><%= category.label %></option>
                         <% } %>
                     </select>
-                    <div class="invalid-feedback">Please pick a category!</div>
+                    <div class="invalid-feedback">Please pick a category.</div>
                 </div>
 
-                <br>
-                <br>
-                <button class="btn btn-dark add-btn mt-3">Add</button>
-                <br><br>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Describe it *</label>
+                    <textarea id="description" name="listing[description]" rows="3" class="form-control"
+                        placeholder="What's it like? Food quality, cleanliness, crowd, anything a junior should know."
+                        required></textarea>
+                    <div class="invalid-feedback">A short description helps a lot.</div>
+                </div>
+
+                <p class="section-head">Where is it</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-7">
+                        <label for="location" class="form-label">Area / address *</label>
+                        <input type="text" id="location" name="listing[location]" class="form-control"
+                            placeholder="e.g. Ratanada, Jodhpur" required>
+                        <div class="invalid-feedback">Roughly where is it?</div>
+                    </div>
+                    <div class="mb-3 col-md-5">
+                        <label for="landmark" class="form-label">Nearest landmark</label>
+                        <input type="text" id="landmark" name="listing[landmark]" class="form-control"
+                            placeholder="e.g. near Bhaskar Circle">
+                    </div>
+                </div>
+                <p class="form-hint">
+                    We look up the coordinates from this, so the place shows on the map with its
+                    distance from campus. The more precise, the better.
+                </p>
+
+                <p class="section-head">Cost</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-5">
+                        <label for="price" class="form-label">Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8377;</span>
+                            <input type="number" min="0" id="price" name="listing[price]" class="form-control"
+                                placeholder="e.g. 2200">
+                        </div>
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="priceUnit" class="form-label">Per</label>
+                        <select name="listing[priceUnit]" id="priceUnit" class="form-select">
+                            <option value="">&mdash;</option>
+                            <option value="per month">per month</option>
+                            <option value="per meal">per meal</option>
+                            <option value="for two">for two</option>
+                            <option value="per person">per person</option>
+                            <option value="per item">per item</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-3">
+                        <label for="deposit" class="form-label">Deposit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8377;</span>
+                            <input type="number" min="0" id="deposit" name="listing[deposit]" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <p class="section-head">Contact &amp; timings</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-4">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" id="phone" name="listing[phone]" class="form-control"
+                            placeholder="98765 43210">
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="whatsapp" class="form-label">WhatsApp</label>
+                        <input type="tel" id="whatsapp" name="listing[whatsapp]" class="form-control"
+                            placeholder="98765 43210">
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="timings" class="form-label">Timings</label>
+                        <input type="text" id="timings" name="listing[timings]" class="form-control"
+                            placeholder="e.g. 7am-11pm, closed Sun">
+                    </div>
+                </div>
+
+                <p class="section-head">Details</p>
+
+                <div class="row align-items-end">
+                    <div class="mb-3 col-md-4">
+                        <label for="gender" class="form-label">For (hostels &amp; PG)</label>
+                        <select name="listing[gender]" id="gender" class="form-select">
+                            <option value="">&mdash;</option>
+                            <option value="Boys">Boys</option>
+                            <option value="Girls">Girls</option>
+                            <option value="Co-ed">Co-ed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-8">
+                        <label for="amenities" class="form-label">Facilities</label>
+                        <input type="text" id="amenities" name="listing[amenities]" class="form-control"
+                            placeholder="wifi, AC, attached bathroom, laundry (comma separated)">
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="on" id="vegOnly" name="listing[vegOnly]">
+                    <label class="form-check-label" for="vegOnly">Pure veg</label>
+                </div>
+
+                <div class="mb-3">
+                    <label for="image" class="form-label">Photo</label>
+                    <input type="file" id="image" name="listing[image]" class="form-control" accept="image/*">
+                    <p class="form-hint mt-1">Optional, but a photo makes it far more useful.</p>
+                </div>
+
+                <button class="btn btn-danger mt-2 mb-5">Submit for review</button>
             </form>
         </div>
     </div>

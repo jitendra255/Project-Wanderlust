@@ -1,63 +1,172 @@
 <% layout("/layouts/boilerplate") -%>
-    <div class="row mt-3">
-        <div class="col-8 offset-2">
-            <h3>Edit your listing</h3>
-            <form action="/listings/<%= listing._id %>?_method=PUT" method="POST" novalidate class="needs-validation"
-                enctype="multipart/form-data">
+    <style>
+        .form-hint {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .section-head {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            margin-top: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+
+    <div class="row mt-4">
+        <div class="col-lg-8 offset-lg-2">
+            <h3 class="mb-1">Edit <%= listing.title %></h3>
+            <% if (!listing.verified && listing.source === "osm") { %>
+                <p class="form-hint mb-4">
+                    This entry came from OpenStreetMap and has never been checked. If you know the
+                    place, correcting it here is genuinely useful to everyone.
+                </p>
+            <% } else { %>
+                <p class="form-hint mb-4">Keep the details accurate &mdash; people rely on them.</p>
+            <% } %>
+
+            <form action="/listings/<%= listing._id %>?_method=PUT" method="post" novalidate
+                class="needs-validation" enctype="multipart/form-data">
+
                 <div class="mb-3">
-                    <label for="title" class="form-label">Title</label>
-                    <input type="text" name="listing[title]" value="<%= listing.title %>" class="form-control" required>
-                    <div class="valid-feedback">Title looks good!</div>
+                    <label for="title" class="form-label">Name of the place *</label>
+                    <input type="text" id="title" name="listing[title]" value="<%= listing.title %>"
+                        class="form-control" required>
+                    <div class="invalid-feedback">Please give it a name.</div>
                 </div>
+
                 <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea name="listing[description]" class="form-control"
-                        required><%= listing.description %></textarea>
-                    <div class="invalid-feedback">Please enter a short description!</div>
-                </div>
-                <div class="mb-3">
-                    Original Image <br>
-                    <img src="<%=originalImageUrl%>" alt="">
-                </div>
-                <div class="mb-3">
-                    <label for="image" class="form-label">Upload New Image</label>
-                    <input type="file" name="listing[image]" class="form-control">
-                </div>
-                <div class="row">
-                    <div class="mb-3 col-md-4">
-                        <label for="price" class="form-label">Price</label>
-                        <input type="number" name="listing[price]" value="<%= listing.price %>" class="form-control"
-                            required>
-                        <div class="invalid-feedback">Price should be valid!</div>
-                    </div>
-                    <div class="mb-3 col-md-8">
-                        <label for="country" class="form-label">Country</label>
-                        <input type="text" name="listing[country]" value="<%= listing.country %>" class="form-control"
-                            required>
-                        <div class="invalid-feedback">Country name should be valid!</div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="location" class="form-label">Location</label>
-                    <input type="text" name="listing[location]" value="<%= listing.location %>" class="form-control"
-                        required>
-                    <div class="invalid-feedback">Location should be valid!</div>
-                </div>
-                <div class="mb-3">
-                    <label for="category" class="form-label">Category</label>
+                    <label for="category" class="form-label">Category *</label>
                     <select name="listing[category]" id="category" class="form-select" required>
-                        <option value="" disabled <%= listing.category ? "" : "selected" %>>Choose a category</option>
+                        <option value="" disabled <%= listing.category ? "" : "selected" %>>Choose one</option>
                         <% for (let category of categories) { %>
                             <option value="<%= category.label %>" <%= listing.category === category.label ? "selected" : "" %>>
                                 <%= category.label %>
                             </option>
                         <% } %>
                     </select>
-                    <div class="invalid-feedback">Please pick a category!</div>
+                    <div class="invalid-feedback">Please pick a category.</div>
                 </div>
-                <button class="btn btn-dark add-btn mt-3">Edit</button>
-                <br>
-                <br>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description *</label>
+                    <textarea id="description" name="listing[description]" rows="3" class="form-control"
+                        required><%= listing.description %></textarea>
+                    <div class="invalid-feedback">A short description helps a lot.</div>
+                </div>
+
+                <p class="section-head">Where is it</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-7">
+                        <label for="location" class="form-label">Area / address *</label>
+                        <input type="text" id="location" name="listing[location]"
+                            value="<%= listing.location || '' %>" class="form-control" required>
+                        <div class="invalid-feedback">Roughly where is it?</div>
+                    </div>
+                    <div class="mb-3 col-md-5">
+                        <label for="landmark" class="form-label">Nearest landmark</label>
+                        <input type="text" id="landmark" name="listing[landmark]"
+                            value="<%= listing.landmark || '' %>" class="form-control">
+                    </div>
+                </div>
+                <p class="form-hint">Changing these re-looks-up the map location.</p>
+
+                <p class="section-head">Cost</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-5">
+                        <label for="price" class="form-label">Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8377;</span>
+                            <input type="number" min="0" id="price" name="listing[price]"
+                                value="<%= listing.price != null ? listing.price : '' %>" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="priceUnit" class="form-label">Per</label>
+                        <select name="listing[priceUnit]" id="priceUnit" class="form-select">
+                            <% const units = ["", "per month", "per meal", "for two", "per person", "per item"]; %>
+                            <% for (let unit of units) { %>
+                                <option value="<%= unit %>" <%= listing.priceUnit === unit ? "selected" : "" %>>
+                                    <%= unit || "—" %>
+                                </option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-3">
+                        <label for="deposit" class="form-label">Deposit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8377;</span>
+                            <input type="number" min="0" id="deposit" name="listing[deposit]"
+                                value="<%= listing.deposit != null ? listing.deposit : '' %>" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <p class="section-head">Contact &amp; timings</p>
+
+                <div class="row">
+                    <div class="mb-3 col-md-4">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" id="phone" name="listing[phone]" value="<%= listing.phone || '' %>"
+                            class="form-control">
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="whatsapp" class="form-label">WhatsApp</label>
+                        <input type="tel" id="whatsapp" name="listing[whatsapp]"
+                            value="<%= listing.whatsapp || '' %>" class="form-control">
+                    </div>
+                    <div class="mb-3 col-md-4">
+                        <label for="timings" class="form-label">Timings</label>
+                        <input type="text" id="timings" name="listing[timings]"
+                            value="<%= listing.timings || '' %>" class="form-control">
+                    </div>
+                </div>
+
+                <p class="section-head">Details</p>
+
+                <div class="row align-items-end">
+                    <div class="mb-3 col-md-4">
+                        <label for="gender" class="form-label">For (hostels &amp; PG)</label>
+                        <select name="listing[gender]" id="gender" class="form-select">
+                            <% for (let g of ["", "Boys", "Girls", "Co-ed"]) { %>
+                                <option value="<%= g %>" <%= listing.gender === g ? "selected" : "" %>>
+                                    <%= g || "—" %>
+                                </option>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div class="mb-3 col-md-8">
+                        <label for="amenities" class="form-label">Facilities</label>
+                        <input type="text" id="amenities" name="listing[amenities]"
+                            value="<%= (listing.amenities || []).join(', ') %>" class="form-control"
+                            placeholder="comma separated">
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="on" id="vegOnly"
+                        name="listing[vegOnly]" <%= listing.vegOnly ? "checked" : "" %>>
+                    <label class="form-check-label" for="vegOnly">Pure veg</label>
+                </div>
+
+                <div class="mb-3">
+                    <label for="image" class="form-label">Photo</label>
+                    <% if (listing.image && listing.image.url) { %>
+                        <div class="mb-2">
+                            <img src="<%= originalImageUrl %>" alt="current photo" class="rounded"
+                                style="max-height: 8rem;">
+                        </div>
+                    <% } %>
+                    <input type="file" id="image" name="listing[image]" class="form-control" accept="image/*">
+                    <p class="form-hint mt-1">Leave empty to keep the current photo.</p>
+                </div>
+
+                <button class="btn btn-danger mt-2 mb-5">Save changes</button>
             </form>
         </div>
     </div>
+    <script src="/js/script.js"></script>

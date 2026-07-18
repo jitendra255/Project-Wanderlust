@@ -22,7 +22,7 @@ const enquiryRouter = require("./routes/enquiry.js")
 const adminRouter = require("./routes/admin.js")
 
 
-const { CATEGORIES } = require("./utils/categories.js")
+const { CATEGORIES, categoryMeta } = require("./utils/categories.js")
 const { CAMPUS, formatDistance } = require("./utils/campus.js")
 
 app.set("view engine", "ejs")
@@ -32,6 +32,7 @@ app.set("views", path.join(__dirname, "views"));
 app.locals.categories = CATEGORIES;
 app.locals.campus = CAMPUS;
 app.locals.formatDistance = formatDistance;
+app.locals.categoryMeta = categoryMeta;
 app.use(express.static(path.join(__dirname, "/public")))
 app.use(express.urlencoded({ extended: true }))
 app.use(methodoverride("_method"))

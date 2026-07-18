@@ -579,6 +579,82 @@ describe("reviews", () => {
     });
 });
 
+describe("review widget", () => {
+    test("renders five required stars, highest first", async () => {
+        const owner = await makeUser("owner");
+        await makeUser("eater");
+        const doc = await Listing.create(place({ owner: owner._id }));
+
+        const agent = await login("eater", "testpass123");
+        const res = await agent.get(`/listings/${doc._id}`);
+
+        const block = res.text.match(/<div class="star-input">[\s\S]*?<\/div>/)[0];
+        const values = [...block.matchAll(/value="(\d)"/g)].map((m) => m[1]);
+
+        // Reversed so `input:checked ~ label` can colour the stars to the left.
+        expect(values).toEqual(["5", "4", "3", "2", "1"]);
+        expect(block.match(/required/g)).toHaveLength(5);
+        expect(block.match(/fa-star/g)).toHaveLength(5);
+    });
+
+    test("the old sprite widget is gone", async () => {
+        const owner = await makeUser("owner");
+        const doc = await Listing.create(place({ owner: owner._id }));
+        const res = await request(app).get(`/listings/${doc._id}`);
+        expect(res.text).not.toContain("starability");
+    });
+
+    test("an existing rating renders as filled and empty stars", async () => {
+        const owner = await makeUser("owner");
+        await makeUser("eater");
+        const doc = await Listing.create(place({ owner: owner._id }));
+
+        const agent = await login("eater", "testpass123");
+        await agent.post(`/listings/${doc._id}/reviews`)
+            .type("form").send({ "review[rating]": 3, "review[comment]": "Decent" });
+
+        const res = await request(app).get(`/listings/${doc._id}`);
+        const display = res.text.match(/<p class="star-display[\s\S]*?<\/p>/)[0];
+        expect(display.match(/star-empty/g)).toHaveLength(2); // 3 of 5 filled
+    });
+});
+
+describe("photo placeholder", () => {
+    test("a place without a photo gets its category colour, not a broken image", async () => {
+        const owner = await makeUser("owner");
+        const doc = await Listing.create(place({
+            category: "Gym", image: { url: "", filename: "" }, owner: owner._id,
+        }));
+
+        const { categoryMeta } = require("../utils/categories.js");
+        const res = await request(app).get(`/listings/${doc._id}`);
+
+        expect(res.text).toContain("place-thumb");
+        expect(res.text).toContain(categoryMeta("Gym").tint);
+        expect(res.text).toContain("Add a photo");
+        expect(res.text).not.toContain('<img src=""');
+    });
+
+    test("a place with a photo shows the photo instead", async () => {
+        const owner = await makeUser("owner");
+        const doc = await Listing.create(place({
+            image: { url: "https://example.com/real.jpg", filename: "real" }, owner: owner._id,
+        }));
+
+        const res = await request(app).get(`/listings/${doc._id}`);
+        expect(res.text).toContain("https://example.com/real.jpg");
+        expect(res.text).not.toContain("No photo yet");
+    });
+
+    test("every category defines its own tint and icon", () => {
+        const { CATEGORIES } = require("../utils/categories.js");
+        const tints = CATEGORIES.map((c) => c.tint);
+        expect(tints.every((t) => /^#[0-9A-Fa-f]{6}$/.test(t))).toBe(true);
+        expect(CATEGORIES.every((c) => c.icon.startsWith("fa-"))).toBe(true);
+        expect(new Set(tints).size).toBe(CATEGORIES.length); // all distinct
+    });
+});
+
 describe("error handling", () => {
     test("unknown routes render the 404 page", async () => {
         const res = await request(app).get("/no-such-page");

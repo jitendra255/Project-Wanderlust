@@ -97,3 +97,88 @@ body{
     display: flex;
     
 }
+/* ---- Star rating -------------------------------------------------------
+   Replaces the sprite-based starability widget, whose floated labels inside a
+   fixed 150px fieldset did not lay out reliably. Self-contained: uses the Font
+   Awesome icons already loaded, and no background images.
+
+   The input row is reversed so that `input:checked ~ label` can colour the
+   stars to the LEFT of the chosen one, which is how a rating reads. */
+.star-input {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 0.15rem;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.star-input input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.star-input label {
+  color: #d8d8d8;
+  cursor: pointer;
+  transition: color 0.12s ease-in-out;
+}
+
+.star-input input:checked ~ label,
+.star-input label:hover,
+.star-input label:hover ~ label {
+  color: #fe424d;
+}
+
+.star-input input:focus-visible + label {
+  outline: 2px solid #999;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Read-only display of a rating already given. */
+.star-display {
+  color: #fe424d;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+.star-display .star-empty {
+  color: #d8d8d8;
+}
+
+/* ---- Photo placeholder -------------------------------------------------
+   Most places have no photo: OpenStreetMap carries none for this area, and we
+   do not attach stock images to real businesses. A tinted, category-coloured
+   panel reads as intentional rather than as a failed image load. */
+.place-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: #fff;
+  text-align: center;
+}
+
+.place-thumb i {
+  font-size: 2.2rem;
+  opacity: 0.9;
+}
+
+.place-thumb .thumb-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.place-thumb-lg i {
+  font-size: 4rem;
+}
+
+.place-thumb-lg .thumb-label {
+  font-size: 0.85rem;
+}

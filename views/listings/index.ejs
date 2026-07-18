@@ -22,19 +22,7 @@
       font-size: 0.8rem;
     }
 
-    .tax-info {
-      display: none;
-    }
 
-    .tax-toggle{
-      border: 1px solid black;
-      border-radius: 1rem;
-      height: 2.5rem;
-      padding: 1rem;
-      margin:auto;
-      display: flex;
-      align-items: center;
-    }
 
     .float-end{
       text-decoration: none !important;
@@ -68,15 +56,6 @@
       color: #adb5bd;
     }
 
-    .no-photo {
-      height: 12rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #f2f2f2;
-      color: #c9c9c9;
-      font-size: 3rem;
-    }
 
     .meta {
       font-size: 0.82rem;
@@ -182,7 +161,7 @@
 
   <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3 g-3">
     <% for (let listing of listings) { %>
-      <% const icon = (categories.find(c => c.label === listing.category) || {}).icon || "fa-location-dot"; %>
+      <% const meta = categoryMeta(listing.category); %>
       <div class="col">
         <a href="/listings/<%= listing._id %>" class="listing-link">
           <div class="card listing-card h-100">
@@ -190,9 +169,10 @@
               <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
                 style="height: 12rem; object-fit: cover;">
             <% } else { %>
-              <%# Most OSM-imported places have no photo yet. %>
-              <div class="card-img-top no-photo">
-                <i class="fa-solid <%= icon %>"></i>
+              <%# No photo: OSM has none for this area and we do not fake them. %>
+              <div class="card-img-top place-thumb" style="height: 12rem; background-color: <%= meta.tint %>;">
+                <i class="fa-solid <%= meta.icon %>"></i>
+                <span class="thumb-label">Photo needed</span>
               </div>
             <% } %>
 

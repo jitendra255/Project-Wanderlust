@@ -15,16 +15,6 @@
             color: #6c757d;
         }
 
-        .no-photo-lg {
-            height: 16rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f2f2f2;
-            color: #c9c9c9;
-            font-size: 4rem;
-            border-radius: 0.5rem;
-        }
 
         .fact dt {
             color: #6c757d;
@@ -52,7 +42,7 @@
     <%
         const isOwner = currUser && listing.owner && listing.owner._id.equals(currUser._id);
         const isAdmin = currUser && currUser.isAdmin;
-        const icon = (categories.find(c => c.label === listing.category) || {}).icon || "fa-location-dot";
+        const meta = categoryMeta(listing.category);
         const point = listing.geometry && listing.geometry.coordinates;
         // wa.me needs a bare international number.
         const waNumber = (listing.whatsapp || "").replace(/[^0-9]/g, "");
@@ -99,7 +89,17 @@
                 <img src="<%= listing.image.url %>" class="img-fluid rounded mb-3" alt="<%= listing.title %>"
                     style="width: 100%; max-height: 24rem; object-fit: cover;">
             <% } else { %>
-                <div class="no-photo-lg mb-3"><i class="fa-solid <%= icon %>"></i></div>
+                <%# No photo yet. Rather than a stock image of some other
+                    restaurant, say so and invite a real one. %>
+                <div class="place-thumb place-thumb-lg mb-2 rounded"
+                    style="height: 16rem; background-color: <%= meta.tint %>;">
+                    <i class="fa-solid <%= meta.icon %>"></i>
+                    <span class="thumb-label">No photo yet</span>
+                </div>
+                <p class="place-meta mb-3">
+                    Been here? <a href="/listings/<%= listing._id %>/edit">Add a photo</a> &mdash;
+                    it helps more than anything else on this page.
+                </p>
             <% } %>
 
             <% if (listing.description) { %>
@@ -216,21 +216,23 @@
                 <h5>Leave a review</h5>
                 <form action="/listings/<%= listing._id %>/reviews" method="post" novalidate class="needs-validation mb-4">
                     <div class="mb-3">
-                        <fieldset class="starability-slot">
-                            <legend class="place-meta">Your rating</legend>
-                            <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="0"
-                                checked aria-label="No rating." />
-                            <input type="radio" id="first-rate1" name="review[rating]" value="1" />
-                            <label for="first-rate1" title="Terrible">1 star</label>
-                            <input type="radio" id="first-rate2" name="review[rating]" value="2" />
-                            <label for="first-rate2" title="Not good">2 stars</label>
-                            <input type="radio" id="first-rate3" name="review[rating]" value="3" />
-                            <label for="first-rate3" title="Average">3 stars</label>
-                            <input type="radio" id="first-rate4" name="review[rating]" value="4" />
-                            <label for="first-rate4" title="Very good">4 stars</label>
-                            <input type="radio" id="first-rate5" name="review[rating]" value="5" />
-                            <label for="first-rate5" title="Amazing">5 stars</label>
-                        </fieldset>
+                        <p class="place-meta mb-1">Your rating</p>
+                        <%# Reversed order so `input:checked ~ label` can colour
+                            the stars to the left of the one picked. %>
+                        <div class="star-input">
+                            <% const ratings = [
+                                 [5, "Excellent"], [4, "Good"], [3, "Okay"],
+                                 [2, "Not great"], [1, "Bad"],
+                               ]; %>
+                            <% for (let [value, title] of ratings) { %>
+                                <input type="radio" id="rate<%= value %>" name="review[rating]"
+                                    value="<%= value %>" required>
+                                <label for="rate<%= value %>" title="<%= title %>"
+                                    aria-label="<%= value %> star<%= value === 1 ? "" : "s" %>">
+                                    <i class="fa-solid fa-star"></i>
+                                </label>
+                            <% } %>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="comment" class="form-label">How was it?</label>
@@ -254,7 +256,11 @@
                                     <h6 class="card-title mb-1">
                                         @<%= review.author ? review.author.username : "unknown" %>
                                     </h6>
-                                    <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>
+                                    <p class="star-display card-text mb-1">
+                                        <% for (let n = 1; n <= 5; n++) { %>
+                                            <i class="fa-solid fa-star <%= n <= review.rating ? "" : "star-empty" %>"></i>
+                                        <% } %>
+                                    </p>
                                     <p class="card-text"><%= review.comment %></p>
                                     <% if (currUser && review.author && review.author._id.equals(currUser._id)) { %>
                                         <form method="post"

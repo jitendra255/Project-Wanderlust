@@ -58,15 +58,6 @@
       border-left-color: #ffc107;
     }
 
-    .no-photo-sm {
-      height: 9rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #f2f2f2;
-      color: #c9c9c9;
-      font-size: 2.5rem;
-    }
   </style>
 
   <div class="row mt-4">
@@ -201,7 +192,7 @@
       <% } else { %>
         <div class="row row-cols-lg-3 row-cols-md-2 row-cols-1 g-3 mb-5">
           <% for (let listing of listings) { %>
-            <% const icon = (categories.find(c => c.label === listing.category) || {}).icon || "fa-location-dot"; %>
+            <% const meta = categoryMeta(listing.category); %>
             <div class="col">
               <div class="card h-100">
                 <a href="/listings/<%= listing._id %>" class="profile-card-link">
@@ -209,7 +200,9 @@
                     <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
                       style="height: 9rem; object-fit: cover;">
                   <% } else { %>
-                    <div class="card-img-top no-photo-sm"><i class="fa-solid <%= icon %>"></i></div>
+                    <div class="card-img-top place-thumb" style="height: 9rem; background-color: <%= meta.tint %>;">
+                      <i class="fa-solid <%= meta.icon %>"></i>
+                    </div>
                   <% } %>
                   <div class="card-body pb-2">
                     <p class="card-text mb-1"><b><%= listing.title %></b></p>
@@ -267,7 +260,11 @@
                       <span class="text-muted fst-italic">Place no longer listed</span>
                     <% } %>
                   </h6>
-                  <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>
+                  <p class="star-display card-text mb-1">
+                    <% for (let n = 1; n <= 5; n++) { %>
+                      <i class="fa-solid fa-star <%= n <= review.rating ? "" : "star-empty" %>"></i>
+                    <% } %>
+                  </p>
                   <p class="card-text"><%= review.comment %></p>
                   <% if (reviewed) { %>
                     <form method="post"

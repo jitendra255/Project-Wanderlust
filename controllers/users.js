@@ -1,6 +1,8 @@
 const User = require("../Models/user.js");
 const Listing = require("../Models/listing.js");
 const Review = require("../Models/review.js");
+const Booking = require("../Models/booking.js");
+const { todayUtc } = require("../utils/dates.js");
 
 module.exports.renderSignupForm = (req, res) => {
     res.render("./users/signup.ejs")
@@ -60,7 +62,28 @@ module.exports.profile = async (req, res) => {
         }
     }
 
-    res.render("./users/profile.ejs", { listings, reviews, listingByReview });
+    // Stays this user has booked.
+    const trips = await Booking.find({ guest: userId })
+        .sort({ checkIn: -1 })
+        .populate("listing", "title image location country");
+
+    // Stays other people have booked on this user's listings.
+    const incomingBookings = await Booking.find({
+        listing: { $in: listings.map((listing) => listing._id) },
+        status: "confirmed",
+    })
+        .sort({ checkIn: 1 })
+        .populate("listing", "title")
+        .populate("guest", "username");
+
+    res.render("./users/profile.ejs", {
+        listings,
+        reviews,
+        listingByReview,
+        trips,
+        incomingBookings,
+        today: todayUtc(),
+    });
 }
 
 module.exports.logout =(req, res, next) => {

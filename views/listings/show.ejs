@@ -49,6 +49,55 @@
         </div>
         <% } %>
 
+            <% const isOwner = currUser && listing.owner._id.equals(currUser._id); %>
+            <hr class="col-8 offset-2">
+            <div class="col-8 offset-2 mb-3 mt-3">
+                <h4>Book this stay</h4>
+
+                <% if (!currUser) { %>
+                    <p class="text-muted">
+                        <a href="/login">Log in</a> to book this listing.
+                    </p>
+                <% } else if (isOwner) { %>
+                    <p class="text-muted">This is your listing &mdash; you can't book it yourself.</p>
+                <% } else { %>
+                    <form action="/listings/<%= listing._id %>/bookings" method="post" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label for="checkIn" class="form-label">Check in</label>
+                            <input type="date" id="checkIn" name="booking[checkIn]" class="form-control"
+                                min="<%= todayIso %>" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="checkOut" class="form-label">Check out</label>
+                            <input type="date" id="checkOut" name="booking[checkOut]" class="form-control"
+                                min="<%= todayIso %>" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="guests" class="form-label">Guests</label>
+                            <input type="number" id="guests" name="booking[guests]" class="form-control" value="1"
+                                min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-danger w-100">
+                                Book &middot; &#8377;<%= listing.price.toLocaleString("en-IN") %>/night
+                            </button>
+                        </div>
+                    </form>
+                <% } %>
+
+                <% if (bookings && bookings.length) { %>
+                    <p class="text-muted mt-3 mb-1" style="font-size: 0.9rem;">Already booked:</p>
+                    <ul class="list-unstyled mb-0" style="font-size: 0.9rem;">
+                        <% for (let booked of bookings) { %>
+                            <li class="text-muted">
+                                &bull; <%= booked.checkIn.toISOString().slice(0, 10) %>
+                                &rarr; <%= booked.checkOut.toISOString().slice(0, 10) %>
+                            </li>
+                        <% } %>
+                    </ul>
+                <% } %>
+            </div>
+
             <% const point = listing.geometry && listing.geometry.coordinates; %>
             <% if (point && point.length === 2) { %>
                 <hr class="col-8 offset-2">

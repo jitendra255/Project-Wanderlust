@@ -388,6 +388,165 @@ describe("profile page", () => {
     });
 });
 
+describe("bookings", () => {
+    const Booking = require("../Models/booking.js");
+
+    // Dates relative to today so the suite never rots.
+    const dayOffset = (n) => {
+        const now = new Date();
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        d.setUTCDate(d.getUTCDate() + n);
+        return d.toISOString().slice(0, 10);
+    };
+
+    let guestAgent;
+    let bookableId;
+
+    beforeAll(async () => {
+        // tester owns every seeded listing, so bookings need a different user.
+        guestAgent = request.agent(app);
+        await guestAgent.post("/signup").type("form").send({
+            username: "traveller",
+            email: "traveller@example.com",
+            password: "travelpass123",
+        });
+        bookableId = (await Listing.findOne({ category: "Domes" }))._id.toString();
+    });
+
+    beforeEach(async () => {
+        await Booking.deleteMany({ listing: bookableId });
+    });
+
+    const book = (agent, checkIn, checkOut, guests = 1) =>
+        agent
+            .post(`/listings/${bookableId}/bookings`)
+            .type("form")
+            .send({ "booking[checkIn]": checkIn, "booking[checkOut]": checkOut, "booking[guests]": guests });
+
+    test("anonymous users are sent to /login", async () => {
+        const res = await book(request(app), dayOffset(1), dayOffset(3));
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe("/login");
+    });
+
+    test("a valid booking is confirmed and priced by nights", async () => {
+        const res = await book(guestAgent, dayOffset(1), dayOffset(4));
+        expect(res.status).toBe(302);
+
+        const booking = await Booking.findOne({ listing: bookableId });
+        expect(booking).not.toBeNull();
+        expect(booking.status).toBe("confirmed");
+
+        const listing = await Listing.findById(bookableId);
+        expect(booking.totalPrice).toBe(listing.price * 3); // 3 nights
+    });
+
+    test("an owner cannot book their own listing", async () => {
+        const owner = request.agent(app);
+        await owner.post("/login").type("form").send({ username: "tester", password: "testpass123" });
+
+        await book(owner, dayOffset(1), dayOffset(3));
+        expect(await Booking.countDocuments({ listing: bookableId })).toBe(0);
+    });
+
+    test("check-out must be after check-in", async () => {
+        await book(guestAgent, dayOffset(5), dayOffset(5));
+        await book(guestAgent, dayOffset(6), dayOffset(4));
+        expect(await Booking.countDocuments({ listing: bookableId })).toBe(0);
+    });
+
+    test("check-in cannot be in the past", async () => {
+        await book(guestAgent, dayOffset(-3), dayOffset(2));
+        expect(await Booking.countDocuments({ listing: bookableId })).toBe(0);
+    });
+
+    test("malformed dates are rejected", async () => {
+        await book(guestAgent, "not-a-date", dayOffset(3));
+        expect(await Booking.countDocuments({ listing: bookableId })).toBe(0);
+    });
+
+    describe("overlap detection", () => {
+        // An existing stay occupying days 10 -> 15.
+        beforeEach(async () => {
+            await book(guestAgent, dayOffset(10), dayOffset(15));
+        });
+
+        test.each([
+            ["identical range", 10, 15],
+            ["fully inside", 11, 14],
+            ["straddling the start", 8, 12],
+            ["straddling the end", 13, 18],
+            ["fully containing", 5, 20],
+        ])("rejects a booking %s", async (_label, from, to) => {
+            await book(guestAgent, dayOffset(from), dayOffset(to));
+            expect(await Booking.countDocuments({ listing: bookableId })).toBe(1);
+        });
+
+        test("allows a stay that starts exactly on the previous checkout day", async () => {
+            await book(guestAgent, dayOffset(15), dayOffset(18));
+            expect(await Booking.countDocuments({ listing: bookableId })).toBe(2);
+        });
+
+        test("allows a stay that ends exactly on the existing check-in day", async () => {
+            await book(guestAgent, dayOffset(7), dayOffset(10));
+            expect(await Booking.countDocuments({ listing: bookableId })).toBe(2);
+        });
+
+        test("cancelling frees the dates for someone else", async () => {
+            const existing = await Booking.findOne({ listing: bookableId });
+
+            const cancel = await guestAgent
+                .post(`/listings/${bookableId}/bookings/${existing._id}?_method=Delete`)
+                .send();
+            expect(cancel.status).toBe(302);
+            expect((await Booking.findById(existing._id)).status).toBe("cancelled");
+
+            await book(guestAgent, dayOffset(10), dayOffset(15));
+            expect(await Booking.countDocuments({ listing: bookableId, status: "confirmed" })).toBe(1);
+        });
+    });
+
+    test("a guest cannot cancel someone else's booking", async () => {
+        await book(guestAgent, dayOffset(20), dayOffset(22));
+        const booking = await Booking.findOne({ listing: bookableId });
+
+        const intruder = request.agent(app);
+        await intruder.post("/signup").type("form").send({
+            username: "intruder",
+            email: "intruder@example.com",
+            password: "intruderpass123",
+        });
+
+        await intruder.post(`/listings/${bookableId}/bookings/${booking._id}?_method=Delete`).send();
+        expect((await Booking.findById(booking._id)).status).toBe("confirmed");
+    });
+
+    test("the listing page shows already-booked ranges", async () => {
+        await book(guestAgent, dayOffset(30), dayOffset(33));
+        const res = await request(app).get(`/listings/${bookableId}`);
+        expect(res.text).toContain("Already booked:");
+        expect(res.text).toContain(dayOffset(30));
+    });
+
+    test("the trip appears on the guest's profile", async () => {
+        await book(guestAgent, dayOffset(40), dayOffset(42));
+        const res = await guestAgent.get("/profile");
+        expect(res.text).toContain("My trips");
+        expect(res.text).toContain("Upcoming");
+    });
+
+    test("the owner sees incoming bookings on their listings", async () => {
+        await book(guestAgent, dayOffset(50), dayOffset(52));
+
+        const owner = request.agent(app);
+        await owner.post("/login").type("form").send({ username: "tester", password: "testpass123" });
+        const res = await owner.get("/profile");
+
+        expect(res.text).toContain("Bookings on my listings");
+        expect(res.text).toContain("@traveller");
+    });
+});
+
 describe("error handling", () => {
     test("unknown routes render the 404 page", async () => {
         const res = await request(app).get("/no-such-page");

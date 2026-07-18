@@ -53,6 +53,22 @@ module.exports.validatereview = (req, res, next) => {
     }
 }
 
+module.exports.isBookingGuest = async (req, res, next) => {
+    const Booking = require("./Models/booking.js");
+    const { bookingId } = req.params;
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+        req.flash("error", "That booking no longer exists");
+        return res.redirect("/profile");
+    }
+    if (!booking.guest.equals(res.locals.currUser._id)) {
+        req.flash("error", "You can only cancel your own bookings");
+        return res.redirect("/profile");
+    }
+    next();
+}
+
 module.exports.isReviewAuthor = async (req, res, next) => {
     let { id, reviewId } = req.params;
     let review = await Review.findById(reviewId);

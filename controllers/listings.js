@@ -1,5 +1,7 @@
 const Listing = require("../Models/listing.js");
+const Booking = require("../Models/booking.js");
 const { geocode } = require("../utils/geocode.js");
+const { todayUtc, formatDay } = require("../utils/dates.js");
 
 // 9 per page keeps whole rows in the 3-column grid.
 const PAGE_SIZE = 9;
@@ -57,8 +59,20 @@ module.exports.show = async (req, res) => {
         req.flash("error", "Listing you requested for doesn't exist");
         return res.redirect("/listings");
     }
-    //console.log(listing);
-    res.render("./listings/show.ejs", { listing })
+    // Upcoming confirmed stays, so the page can show what is already taken.
+    const bookings = await Booking.find({
+        listing: id,
+        status: "confirmed",
+        checkOut: { $gte: todayUtc() },
+    })
+        .sort({ checkIn: 1 })
+        .select("checkIn checkOut");
+
+    res.render("./listings/show.ejs", {
+        listing,
+        bookings,
+        todayIso: formatDay(todayUtc()), // min= for the date inputs
+    })
 }
 
 module.exports.create = async (req, res, next) => {

@@ -88,9 +88,21 @@
             <% if (listing.image && listing.image.url) { %>
                 <img src="<%= listing.image.url %>" class="img-fluid rounded mb-3" alt="<%= listing.title %>"
                     style="width: 100%; max-height: 24rem; object-fit: cover;">
+            <% } else if (meta.stockImage) { %>
+                <%# Generic picture of the category, NOT this place. Said plainly
+                    below, so nobody turns up expecting what they see. %>
+                <div class="stock-wrap rounded mb-2" style="background-color: <%= meta.tint %>;">
+                    <img src="<%= meta.stockImage %>" class="img-fluid stock-img rounded"
+                        alt="Generic <%= listing.category %> image"
+                        style="width: 100%; height: 20rem; object-fit: cover;">
+                    <span class="stock-badge stock-badge-lg">Category image &mdash; not this place</span>
+                </div>
+                <p class="place-meta mb-3">
+                    That picture is a generic <%= listing.category.toLowerCase() %> image, not a photo of
+                    <%= listing.title %>. Been here?
+                    <a href="/listings/<%= listing._id %>/edit">Add a real one</a>.
+                </p>
             <% } else { %>
-                <%# No photo yet. Rather than a stock image of some other
-                    restaurant, say so and invite a real one. %>
                 <div class="place-thumb place-thumb-lg mb-2 rounded"
                     style="height: 16rem; background-color: <%= meta.tint %>;">
                     <i class="fa-solid <%= meta.icon %>"></i>

@@ -168,8 +168,16 @@
             <% if (listing.image && listing.image.url) { %>
               <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
                 style="height: 12rem; object-fit: cover;">
+            <% } else if (meta.stockImage) { %>
+              <%# Generic picture of the category, NOT of this shop. Badged, so
+                  nobody plans a visit based on what they see here. %>
+              <div class="stock-wrap" style="background-color: <%= meta.tint %>;">
+                <img src="<%= meta.stockImage %>" class="card-img-top stock-img"
+                  alt="Generic <%= listing.category %> image" loading="lazy"
+                  style="height: 12rem; object-fit: cover;">
+                <span class="stock-badge">Category image</span>
+              </div>
             <% } else { %>
-              <%# No photo: OSM has none for this area and we do not fake them. %>
               <div class="card-img-top place-thumb" style="height: 12rem; background-color: <%= meta.tint %>;">
                 <i class="fa-solid <%= meta.icon %>"></i>
                 <span class="thumb-label">Photo needed</span>
@@ -266,4 +274,9 @@
     <a href="https://www.openstreetmap.org/copyright" class="text-muted">OpenStreetMap contributors</a>
     (ODbL). Entries marked <span class="badge text-bg-warning">Unverified</span> have not been
     checked on the ground &mdash; help by correcting them.
+    <br>
+    Images badged <em>Category image</em> are generic pictures of that kind of place, not of the
+    listed business, from
+    <a href="https://commons.wikimedia.org/" class="text-muted">Wikimedia Commons</a>
+    (<%= [...new Set(categories.map(c => c.stockLicence).filter(Boolean))].join(", ") %>).
   </p>

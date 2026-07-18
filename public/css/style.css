@@ -182,3 +182,36 @@ body{
 .place-thumb-lg .thumb-label {
   font-size: 0.85rem;
 }
+
+/* ---- Stock category image ---------------------------------------------
+   A generic picture of the category, never of the specific place. Dimmed and
+   badged so it reads as decoration, not as a photograph of that shop. */
+.stock-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.stock-img {
+  opacity: 0.82;
+  filter: saturate(0.9);
+}
+
+.stock-badge {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  pointer-events: none;
+}
+
+.stock-badge-lg {
+  font-size: 0.72rem;
+  left: 0.75rem;
+  bottom: 0.75rem;
+}

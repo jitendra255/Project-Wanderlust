@@ -619,23 +619,10 @@ describe("review widget", () => {
     });
 });
 
-describe("photo placeholder", () => {
-    test("a place without a photo gets its category colour, not a broken image", async () => {
-        const owner = await makeUser("owner");
-        const doc = await Listing.create(place({
-            category: "Gym", image: { url: "", filename: "" }, owner: owner._id,
-        }));
+describe("place images", () => {
+    const { CATEGORIES, categoryMeta } = require("../utils/categories.js");
 
-        const { categoryMeta } = require("../utils/categories.js");
-        const res = await request(app).get(`/listings/${doc._id}`);
-
-        expect(res.text).toContain("place-thumb");
-        expect(res.text).toContain(categoryMeta("Gym").tint);
-        expect(res.text).toContain("Add a photo");
-        expect(res.text).not.toContain('<img src=""');
-    });
-
-    test("a place with a photo shows the photo instead", async () => {
+    test("a real uploaded photo always wins over the stock image", async () => {
         const owner = await makeUser("owner");
         const doc = await Listing.create(place({
             image: { url: "https://example.com/real.jpg", filename: "real" }, owner: owner._id,
@@ -643,15 +630,65 @@ describe("photo placeholder", () => {
 
         const res = await request(app).get(`/listings/${doc._id}`);
         expect(res.text).toContain("https://example.com/real.jpg");
-        expect(res.text).not.toContain("No photo yet");
+        expect(res.text).not.toContain(categoryMeta("Mess & Tiffin").stockImage);
+        expect(res.text).not.toContain("Category image");
     });
 
-    test("every category defines its own tint and icon", () => {
-        const { CATEGORIES } = require("../utils/categories.js");
-        const tints = CATEGORIES.map((c) => c.tint);
-        expect(tints.every((t) => /^#[0-9A-Fa-f]{6}$/.test(t))).toBe(true);
-        expect(CATEGORIES.every((c) => c.icon.startsWith("fa-"))).toBe(true);
-        expect(new Set(tints).size).toBe(CATEGORIES.length); // all distinct
+    test("a place without a photo falls back to the category image", async () => {
+        const owner = await makeUser("owner");
+        const doc = await Listing.create(place({
+            category: "Gym", image: { url: "", filename: "" }, owner: owner._id,
+        }));
+
+        const res = await request(app).get(`/listings/${doc._id}`);
+        expect(res.text).toContain(categoryMeta("Gym").stockImage);
+        expect(res.text).not.toContain('<img src=""');
+    });
+
+    // The whole point: a stock photo must never read as a photo of that shop.
+    test("the stock image is labelled as generic, on the card and the page", async () => {
+        const owner = await makeUser("owner");
+        const doc = await Listing.create(place({
+            title: "Some Real Shop", category: "Gym",
+            image: { url: "", filename: "" }, owner: owner._id,
+        }));
+
+        const detail = await request(app).get(`/listings/${doc._id}`);
+        expect(detail.text).toContain("Category image");
+        expect(detail.text).toContain("not this place");
+        expect(detail.text).toContain("not a photo of");
+        expect(detail.text).toContain("Add a real one");
+
+        const index = await request(app).get("/listings");
+        expect(index.text).toContain("stock-badge");
+        expect(index.text).toContain("Category image");
+    });
+
+    test("the index credits Wikimedia Commons and the licences", async () => {
+        const owner = await makeUser("owner");
+        await Listing.create(place({ image: { url: "", filename: "" }, owner: owner._id }));
+
+        const res = await request(app).get("/listings");
+        expect(res.text).toContain("commons.wikimedia.org");
+        expect(res.text).toContain("generic pictures of that kind of place");
+    });
+
+    test("every category has a licensed stock image, a distinct tint and an icon", () => {
+        for (const category of CATEGORIES) {
+            expect(category.stockImage).toMatch(/^https:\/\/upload\.wikimedia\.org\//);
+            expect(category.stockLicence).toBeTruthy();
+            expect(category.tint).toMatch(/^#[0-9A-Fa-f]{6}$/);
+            expect(category.icon).toMatch(/^fa-/);
+        }
+        expect(new Set(CATEGORIES.map((c) => c.tint)).size).toBe(CATEGORIES.length);
+        expect(new Set(CATEGORIES.map((c) => c.stockImage)).size).toBe(CATEGORIES.length);
+    });
+
+    test("an unknown category degrades safely instead of throwing", () => {
+        const meta = categoryMeta("Nonexistent");
+        expect(meta.stockImage).toBeNull();
+        expect(meta.tint).toMatch(/^#/);
+        expect(meta.icon).toMatch(/^fa-/);
     });
 });
 

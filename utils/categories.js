@@ -48,7 +48,9 @@ const CATEGORIES = [
         icon: "fa-bowl-food",
         priceUnit: "for two",
         tint: "#D6453D",
-        stockImage: `${COMMONS}/5/5b/South_Indian_dish_Idli.jpg/960px-South_Indian_dish_Idli.jpg`,
+        // Bikaner is in Rajasthan - closer to what a Jodhpur student actually eats
+        // than the South Indian dish this used to show.
+        stockImage: `${COMMONS}/6/6a/Bikaner_chole_bhature.jpg/960px-Bikaner_chole_bhature.jpg`,
         stockLicence: "CC BY-SA 4.0",
     },
     {

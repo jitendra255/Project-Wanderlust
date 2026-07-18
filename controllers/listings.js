@@ -1,8 +1,48 @@
 const Listing = require("../Models/listing.js");
 
+// 9 per page keeps whole rows in the 3-column grid.
+const PAGE_SIZE = 9;
+
+// Search and category filter are independent and compose - either, both, or neither.
+function buildListingQuery({ location, category }) {
+    const query = {};
+    if (category) {
+        query.category = { $regex: category, $options: "i" };
+    }
+    if (location) {
+        query.$or = [
+            { location: { $regex: location, $options: "i" } },
+            { country: { $regex: location, $options: "i" } },
+        ];
+    }
+    return query;
+}
+
+async function renderListings(req, res, { location = "", category = "" }) {
+    const query = buildListingQuery({ location, category });
+
+    const total = await Listing.countDocuments(query);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    // Clamp so a hand-typed ?page=999 lands on the last page instead of an empty grid.
+    const page = Math.min(Math.max(1, parseInt(req.query.page, 10) || 1), totalPages);
+
+    const listings = await Listing.find(query)
+        .sort({ _id: 1 })
+        .skip((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
+        .populate("owner");
+
+    res.render("./listings/index.ejs", {
+        listings,
+        searchQuery: location,
+        activeFilter: category,
+        pagination: { page, totalPages, total, pageSize: PAGE_SIZE },
+    });
+}
+
 module.exports.index = async (req, res) => {
-    let listings = await Listing.find()
-    res.render("./listings/index.ejs", { listings,searchQuery: "" })
+    const { location = "", category = "" } = req.query;
+    await renderListings(req, res, { location, category });
 }
 
 module.exports.new = (req, res) => {
@@ -68,48 +108,28 @@ module.exports.delete = async (req, res) => {
     res.redirect("/listings");
 }
 
+// Kept as a distinct route for backwards compatibility - /listings?location=
+// does the same thing, and also composes with ?category=.
 module.exports.search = async (req, res) => {
-        const { location } = req.query;
-        
-        if (!location) {
-            req.flash("error", "Please enter a location to search");
-            return res.redirect("/listings");
-        }
-    
-        const listings = await Listing.find({
-            $or: [
-                { location: { $regex: location, $options: 'i' } },
-                { country: { $regex: location, $options: 'i' } }
-            ]
-        }).populate("owner").populate({ 
-            path: "reviews", 
-            populate: { path: "author" } 
-        });
-    
-        res.render("./listings/index.ejs", { 
-            listings,
-            searchQuery: location // Pass the search term
-        });
+    const { location, category = "" } = req.query;
+
+    if (!location) {
+        req.flash("error", "Please enter a location to search");
+        return res.redirect("/listings");
     }
 
-    module.exports.filter = async (req, res) => {
-        const { category } = req.query;
-        
-        if (!category) {
-            req.flash("error", "Please enter a category to search");
-            return res.redirect("/listings");
-        }
-    
-        const listings = await Listing.find({ category: { $regex: category, $options: 'i' },
-        }).populate("owner").populate({ 
-            path: "reviews", 
-            populate: { path: "author" } 
-        });
-    
-        res.render("./listings/index.ejs", {
-            listings,
-            searchQuery: "",
-            activeFilter: category // Pass the search term
-        });
+    await renderListings(req, res, { location, category });
+}
+
+// As above: /listings?category= is the canonical form.
+module.exports.filter = async (req, res) => {
+    const { category, location = "" } = req.query;
+
+    if (!category) {
+        req.flash("error", "Please enter a category to search");
+        return res.redirect("/listings");
     }
+
+    await renderListings(req, res, { category, location });
+}
 

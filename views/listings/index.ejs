@@ -53,6 +53,20 @@
     .filter.active-filter > div {
       color: #fe424d;
     }
+
+    .pagination .page-link {
+      color: #fe424d;
+    }
+
+    .pagination .page-item.active .page-link {
+      background-color: #fe424d;
+      border-color: #fe424d;
+      color: #fff;
+    }
+
+    .pagination .page-item.disabled .page-link {
+      color: #adb5bd;
+    }
   </style>
 
   <!-- <h3 class="mt-3">All Listings!!</h3> -->
@@ -73,11 +87,30 @@
       { icon: "fa-landmark-dome", label: "Domes" },
       { icon: "fa-sailboat", label: "Boats" },
     ];
+
+    const currentSearch = (typeof searchQuery !== "undefined" && searchQuery) ? searchQuery : "";
+    const currentCategory = (typeof activeFilter !== "undefined" && activeFilter) ? activeFilter : "";
+    const pager = (typeof pagination !== "undefined" && pagination) ? pagination : null;
+
+    // Build a /listings URL that keeps the current search + category, applying
+    // any overrides. Pass null for a param to drop it.
+    const listingsUrl = (overrides = {}) => {
+      const params = new URLSearchParams();
+      if (currentSearch) params.set("location", currentSearch);
+      if (currentCategory) params.set("category", currentCategory);
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value === null || value === undefined || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      const qs = params.toString();
+      return qs ? `/listings?${qs}` : "/listings";
+    };
   %>
   <div id="filters">
     <% for (let cat of filterCategories) { %>
-      <a href="/listings/filter?category=<%= encodeURIComponent(cat.label) %>" class="filter-link">
-        <div class="filter <%= (typeof activeFilter !== "undefined" && activeFilter === cat.label) ? 'active-filter' : '' %>">
+      <% const isActive = currentCategory === cat.label; %>
+      <a href="<%= isActive ? listingsUrl({ category: null, page: null }) : listingsUrl({ category: cat.label, page: null }) %>" class="filter-link">
+        <div class="filter <%= isActive ? 'active-filter' : '' %>">
           <div><i class="fa-solid <%= cat.icon %>"></i></div>
           <p><%= cat.label %></p>
         </div>
@@ -91,21 +124,22 @@
     </div>
 
   </div>
-  <% if(searchQuery) { %>
+  <% if (currentSearch || currentCategory) { %>
     <div class="alert alert-info">
-      Showing results for: <strong><%= searchQuery %></strong>
-      <a href="/listings" class="float-end">Show all listings</a>
+      <% if (currentCategory) { %>
+        Showing category: <strong><%= currentCategory %></strong><% if (currentSearch) { %> in <strong><%= currentSearch %></strong><% } %>
+      <% } else { %>
+        Showing results for: <strong><%= currentSearch %></strong>
+      <% } %>
+      <% if (pager) { %>&mdash; <%= pager.total %> listing<%= pager.total === 1 ? "" : "s" %><% } %>
+      <a href="/listings" class="float-end">Clear all</a>
     </div>
   <% } %>
 
-  <% if(typeof activeFilter !== "undefined" && activeFilter) { %>
-    <div class="alert alert-info">
-      Showing category: <strong><%= activeFilter %></strong>
-      <a href="/listings" class="float-end">Show all listings</a>
+  <% if (!listings.length) { %>
+    <div class="alert alert-warning">
+      No listings found<% if (currentCategory) { %> in <strong><%= currentCategory %></strong><% } %><% if (currentSearch) { %> matching <strong><%= currentSearch %></strong><% } %>.
     </div>
-    <% if(!listings.length) { %>
-      <div class="alert alert-warning">No listings found in this category yet.</div>
-    <% } %>
   <% } %>
 
   <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
@@ -130,6 +164,51 @@
       </a>
       <% } %>
   </div>
+
+  <% if (pager && pager.totalPages > 1) { %>
+    <%
+      const windowSize = 2;
+      const from = Math.max(1, pager.page - windowSize);
+      const to = Math.min(pager.totalPages, pager.page + windowSize);
+      // Page 1 is the bare URL - keeps ?page=1 out of the address bar.
+      const pageHref = (n) => listingsUrl({ page: n === 1 ? null : n });
+    %>
+    <nav aria-label="Listing pages" class="mt-4">
+      <ul class="pagination justify-content-center flex-wrap">
+        <li class="page-item <%= pager.page === 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pageHref(pager.page - 1) %>">Previous</a>
+        </li>
+
+        <% if (from > 1) { %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(1) %>">1</a></li>
+          <% if (from > 2) { %>
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          <% } %>
+        <% } %>
+
+        <% for (let n = from; n <= to; n++) { %>
+          <li class="page-item <%= n === pager.page ? 'active' : '' %>">
+            <a class="page-link" href="<%= pageHref(n) %>"><%= n %></a>
+          </li>
+        <% } %>
+
+        <% if (to < pager.totalPages) { %>
+          <% if (to < pager.totalPages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="<%= pageHref(pager.totalPages) %>"><%= pager.totalPages %></a></li>
+        <% } %>
+
+        <li class="page-item <%= pager.page === pager.totalPages ? 'disabled' : '' %>">
+          <a class="page-link" href="<%= pageHref(pager.page + 1) %>">Next</a>
+        </li>
+      </ul>
+      <p class="text-center text-muted small">
+        Page <%= pager.page %> of <%= pager.totalPages %> &middot; <%= pager.total %> listings
+      </p>
+    </nav>
+  <% } %>
+
   <script>
     let taxSwitch = document.getElementById("flexSwitchCheckDefault");
     taxSwitch.addEventListener("click", () => {

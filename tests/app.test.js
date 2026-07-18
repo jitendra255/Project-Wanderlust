@@ -11,6 +11,14 @@ let castleId;
 // Number of listing cards rendered on an index page.
 const cardCount = (html) => (html.match(/listing-card/g) || []).length;
 
+// Ids of the listings linked from an index page.
+const listingIds = (html) =>
+    [...html.matchAll(/href="\/listings\/([a-f0-9]{24})"/g)].map((m) => m[1]);
+
+const PAGE_SIZE = 9;
+const TOTAL = 29;
+const LAST_PAGE = Math.ceil(TOTAL / PAGE_SIZE); // 4
+
 beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
 
@@ -41,16 +49,57 @@ afterAll(async () => {
 });
 
 describe("listings index", () => {
-    test("renders every seeded listing", async () => {
+    test("renders the first page of listings", async () => {
         const res = await request(app).get("/listings");
         expect(res.status).toBe(200);
-        expect(cardCount(res.text)).toBe(29);
+        expect(cardCount(res.text)).toBe(PAGE_SIZE);
+        expect(res.text).toContain(`Page 1 of ${LAST_PAGE}`);
     });
 
     test("renders a link for all 11 category tiles", async () => {
         const res = await request(app).get("/listings");
-        const links = res.text.match(/href="\/listings\/filter\?category=/g) || [];
+        const links = res.text.match(/href="\/listings\?category=/g) || [];
         expect(links).toHaveLength(11);
+    });
+});
+
+describe("pagination", () => {
+    test("a middle page returns a full slice", async () => {
+        const res = await request(app).get("/listings").query({ page: 2 });
+        expect(cardCount(res.text)).toBe(PAGE_SIZE);
+        expect(res.text).toContain(`Page 2 of ${LAST_PAGE}`);
+    });
+
+    test("the last page returns the remainder", async () => {
+        const res = await request(app).get("/listings").query({ page: LAST_PAGE });
+        expect(cardCount(res.text)).toBe(TOTAL - PAGE_SIZE * (LAST_PAGE - 1));
+        expect(res.text).toContain(`Page ${LAST_PAGE} of ${LAST_PAGE}`);
+    });
+
+    test("pages neither overlap nor drop a listing", async () => {
+        const seen = new Set();
+        for (let page = 1; page <= LAST_PAGE; page++) {
+            const res = await request(app).get("/listings").query({ page });
+            listingIds(res.text).forEach((id) => seen.add(id));
+        }
+        expect(seen.size).toBe(TOTAL);
+    });
+
+    test("an out-of-range page clamps to the last page", async () => {
+        const res = await request(app).get("/listings").query({ page: 999 });
+        expect(res.status).toBe(200);
+        expect(res.text).toContain(`Page ${LAST_PAGE} of ${LAST_PAGE}`);
+    });
+
+    test("a non-numeric page falls back to the first", async () => {
+        const res = await request(app).get("/listings").query({ page: "abc" });
+        expect(res.status).toBe(200);
+        expect(res.text).toContain(`Page 1 of ${LAST_PAGE}`);
+    });
+
+    test("no pager is rendered when results fit on one page", async () => {
+        const res = await request(app).get("/listings").query({ category: "Castles" });
+        expect(res.text).not.toContain("Page 1 of");
     });
 });
 
@@ -71,35 +120,77 @@ describe("category filter", () => {
     };
 
     test.each(Object.entries(expected))("%s returns %i listing(s)", async (category, count) => {
-        const res = await request(app)
-            .get("/listings/filter")
-            .query({ category });
+        const res = await request(app).get("/listings").query({ category });
         expect(res.status).toBe(200);
         expect(cardCount(res.text)).toBe(count);
     });
 
     test("category counts sum to the full catalogue", () => {
         const total = Object.values(expected).reduce((a, b) => a + b, 0);
-        expect(total).toBe(29);
+        expect(total).toBe(TOTAL);
     });
 
     test("shows the active-filter banner", async () => {
-        const res = await request(app).get("/listings/filter").query({ category: "Castles" });
+        const res = await request(app).get("/listings").query({ category: "Castles" });
         expect(res.text).toContain("Showing category:");
         expect(res.text).toContain("Historic Castle in Scotland");
     });
 
     test("a category with no matches shows the empty state", async () => {
-        const res = await request(app).get("/listings/filter").query({ category: "Nonexistent" });
+        const res = await request(app).get("/listings").query({ category: "Nonexistent" });
         expect(res.status).toBe(200);
         expect(cardCount(res.text)).toBe(0);
-        expect(res.text).toContain("No listings found in this category yet.");
+        expect(res.text).toContain("No listings found");
+    });
+
+    test("the legacy /listings/filter route still works", async () => {
+        const res = await request(app).get("/listings/filter").query({ category: "Castles" });
+        expect(res.status).toBe(200);
+        expect(cardCount(res.text)).toBe(1);
+        expect(res.text).toContain("Historic Castle in Scotland");
     });
 
     test("missing category redirects back to /listings", async () => {
         const res = await request(app).get("/listings/filter");
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe("/listings");
+    });
+});
+
+describe("search and filter compose", () => {
+    test("category + location narrows to the intersection", async () => {
+        const res = await request(app).get("/listings").query({ category: "Pools", location: "Bali" });
+        expect(res.status).toBe(200);
+        expect(cardCount(res.text)).toBe(1);
+        expect(res.text).toContain("Beachfront Bungalow in Bali");
+    });
+
+    test("category + country narrows to the intersection", async () => {
+        const res = await request(app).get("/listings").query({ category: "Camping", location: "United States" });
+        expect(res.status).toBe(200);
+        expect(cardCount(res.text)).toBe(4);
+    });
+
+    test("a combination with no overlap yields nothing", async () => {
+        const res = await request(app).get("/listings").query({ category: "Castles", location: "Bali" });
+        expect(res.status).toBe(200);
+        expect(cardCount(res.text)).toBe(0);
+        expect(res.text).toContain("No listings found");
+    });
+
+    test("the banner reflects both filters at once", async () => {
+        const res = await request(app).get("/listings").query({ category: "Pools", location: "Bali" });
+        expect(res.text).toContain("Showing category:");
+        expect(res.text).toContain("Pools");
+        expect(res.text).toContain("Bali");
+    });
+
+    test("the legacy search route still composes with a category", async () => {
+        const res = await request(app)
+            .get("/listings/search")
+            .query({ location: "United States", category: "Camping" });
+        expect(res.status).toBe(200);
+        expect(cardCount(res.text)).toBe(4);
     });
 });
 

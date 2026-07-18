@@ -25,7 +25,7 @@
       border-radius: 1rem;
       padding: 0.75rem 1.25rem;
       text-align: center;
-      min-width: 6.5rem;
+      min-width: 6rem;
     }
 
     .stat-pill .stat-value {
@@ -44,166 +44,190 @@
       color: inherit;
     }
 
-    .category-badge {
-      background-color: #fe424d;
-      color: #fff;
-      font-size: 0.7rem;
-      border-radius: 1rem;
-      padding: 0.15rem 0.6rem;
+    .meta {
+      font-size: 0.82rem;
+      color: #6c757d;
+    }
+
+    .thread {
+      border-left: 3px solid #dee2e6;
+      padding-left: 0.9rem;
+    }
+
+    .thread.unanswered {
+      border-left-color: #ffc107;
+    }
+
+    .no-photo-sm {
+      height: 9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f2f2f2;
+      color: #c9c9c9;
+      font-size: 2.5rem;
     }
   </style>
 
   <div class="row mt-4">
-    <div class="col-10 offset-1">
+    <div class="col-lg-10 offset-lg-1">
 
       <div class="profile-header d-flex align-items-center gap-3 flex-wrap">
         <div class="profile-avatar"><%= currUser.username.charAt(0) %></div>
         <div class="me-auto">
-          <h3 class="mb-0"><%= currUser.username %></h3>
-          <p class="text-muted mb-0"><%= currUser.email %></p>
+          <h3 class="mb-0">
+            <%= currUser.username %>
+            <% if (currUser.isAdmin) { %>
+              <span class="badge text-bg-dark align-middle">admin</span>
+            <% } %>
+          </h3>
+          <p class="meta mb-0"><%= currUser.email %></p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
           <div class="stat-pill">
             <div class="stat-value"><%= listings.length %></div>
-            <div class="stat-label">Listing<%= listings.length === 1 ? "" : "s" %></div>
-          </div>
-          <div class="stat-pill">
-            <div class="stat-value"><%= trips.filter(t => t.status === "confirmed").length %></div>
-            <div class="stat-label">Trip<%= trips.filter(t => t.status === "confirmed").length === 1 ? "" : "s" %></div>
+            <div class="stat-label">Added</div>
           </div>
           <div class="stat-pill">
             <div class="stat-value"><%= reviews.length %></div>
             <div class="stat-label">Review<%= reviews.length === 1 ? "" : "s" %></div>
           </div>
+          <div class="stat-pill">
+            <div class="stat-value"><%= enquiriesReceived.filter(e => !e.reply).length %></div>
+            <div class="stat-label">To answer</div>
+          </div>
         </div>
       </div>
 
-      <% const day = (d) => new Date(d).toISOString().slice(0, 10); %>
+      <% if (currUser.isAdmin) { %>
+        <a href="/admin/queue" class="btn btn-sm btn-dark mb-4">Open moderation queue</a>
+      <% } %>
 
-      <h4 class="mb-3">My trips</h4>
+      <%# ---- Questions people asked about places this user added ---- %>
+      <h4 class="mb-1">Questions about my places</h4>
+      <p class="meta mb-3">Juniors asking about places you added. Answering helps everyone.</p>
 
-      <% if (!trips.length) { %>
-        <div class="alert alert-light border text-center py-4">
-          You haven't booked any stays yet.
+      <% if (!enquiriesReceived.length) { %>
+        <div class="alert alert-light border py-3 meta mb-4">No questions yet.</div>
+      <% } else { %>
+        <div class="mb-4">
+          <% for (let enquiry of enquiriesReceived) { %>
+            <div class="thread <%= enquiry.reply ? "" : "unanswered" %> mb-3">
+              <p class="meta mb-1">
+                <strong>@<%= enquiry.from ? enquiry.from.username : "someone" %></strong>
+                asked about
+                <% if (enquiry.listing) { %>
+                  <a href="/listings/<%= enquiry.listing._id %>" class="profile-card-link fw-bold">
+                    <%= enquiry.listing.title %>
+                  </a>
+                <% } else { %>
+                  a place that has since been removed
+                <% } %>
+              </p>
+              <p class="mb-2"><%= enquiry.message %></p>
+
+              <% if (enquiry.reply) { %>
+                <p class="meta mb-0"><strong>You replied:</strong> <%= enquiry.reply %></p>
+              <% } else if (enquiry.listing) { %>
+                <form method="post" action="/listings/<%= enquiry.listing._id %>/enquiries/<%= enquiry._id %>/reply"
+                  class="row g-2">
+                  <div class="col-md-9">
+                    <input type="text" name="enquiry[reply]" class="form-control form-control-sm"
+                      placeholder="Write a reply..." required>
+                  </div>
+                  <div class="col-md-3">
+                    <button class="btn btn-sm btn-danger w-100">Reply</button>
+                  </div>
+                </form>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+      <%# ---- Questions this user asked ---- %>
+      <h4 class="mb-3">Questions I've asked</h4>
+
+      <% if (!enquiriesSent.length) { %>
+        <div class="alert alert-light border py-3 meta mb-4">
+          You haven't asked about any place yet.
         </div>
       <% } else { %>
-        <div class="table-responsive mb-4">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Stay</th>
-                <th>Dates</th>
-                <th>Guests</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <% for (let trip of trips) { %>
-                <% const upcoming = trip.status === "confirmed" && new Date(trip.checkOut) >= today; %>
-                <tr>
-                  <td>
-                    <% if (trip.listing) { %>
-                      <a href="/listings/<%= trip.listing._id %>" class="profile-card-link fw-bold">
-                        <%= trip.listing.title %>
-                      </a>
-                      <div class="text-muted" style="font-size: 0.8rem;">
-                        <%= trip.listing.location %>, <%= trip.listing.country %>
-                      </div>
-                    <% } else { %>
-                      <span class="text-muted fst-italic">Listing removed</span>
-                    <% } %>
-                  </td>
-                  <td><%= day(trip.checkIn) %> &rarr; <%= day(trip.checkOut) %></td>
-                  <td><%= trip.guests %></td>
-                  <td>&#8377;<%= trip.totalPrice.toLocaleString("en-IN") %></td>
-                  <td>
-                    <% if (trip.status === "cancelled") { %>
-                      <span class="badge bg-secondary">Cancelled</span>
-                    <% } else if (upcoming) { %>
-                      <span class="badge bg-success">Upcoming</span>
-                    <% } else { %>
-                      <span class="badge bg-light text-dark">Completed</span>
-                    <% } %>
-                  </td>
-                  <td>
-                    <% if (upcoming && trip.listing) { %>
-                      <form method="post"
-                        action="/listings/<%= trip.listing._id %>/bookings/<%= trip._id %>?_method=Delete"
-                        onsubmit="return confirm('Cancel this booking?');">
-                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
-                      </form>
-                    <% } %>
-                  </td>
-                </tr>
+        <div class="mb-4">
+          <% for (let enquiry of enquiriesSent) { %>
+            <div class="thread <%= enquiry.reply ? "" : "unanswered" %> mb-3">
+              <p class="meta mb-1">
+                You asked
+                <strong>@<%= enquiry.to ? enquiry.to.username : "someone" %></strong>
+                about
+                <% if (enquiry.listing) { %>
+                  <a href="/listings/<%= enquiry.listing._id %>" class="profile-card-link fw-bold">
+                    <%= enquiry.listing.title %>
+                  </a>
+                <% } else { %>
+                  a place that has since been removed
+                <% } %>
+              </p>
+              <p class="mb-1"><%= enquiry.message %></p>
+              <% if (enquiry.reply) { %>
+                <p class="meta mb-0"><strong>Reply:</strong> <%= enquiry.reply %></p>
+              <% } else { %>
+                <p class="meta mb-0"><em>Waiting for a reply.</em></p>
               <% } %>
-            </tbody>
-          </table>
+            </div>
+          <% } %>
         </div>
       <% } %>
 
-      <% if (incomingBookings.length) { %>
-        <h4 class="mb-3">Bookings on my listings</h4>
-        <div class="table-responsive mb-4">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Listing</th>
-                <th>Guest</th>
-                <th>Dates</th>
-                <th>Guests</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% for (let booking of incomingBookings) { %>
-                <tr>
-                  <td>
-                    <a href="/listings/<%= booking.listing._id %>" class="profile-card-link fw-bold">
-                      <%= booking.listing.title %>
-                    </a>
-                  </td>
-                  <td>@<%= booking.guest ? booking.guest.username : "unknown" %></td>
-                  <td><%= day(booking.checkIn) %> &rarr; <%= day(booking.checkOut) %></td>
-                  <td><%= booking.guests %></td>
-                  <td>&#8377;<%= booking.totalPrice.toLocaleString("en-IN") %></td>
-                </tr>
-              <% } %>
-            </tbody>
-          </table>
-        </div>
-      <% } %>
-
-      <div class="d-flex align-items-center mb-3">
-        <h4 class="mb-0 me-auto">My listings</h4>
-        <a href="/listings/new" class="btn btn-danger btn-sm">Add new listing</a>
+      <%# ---- Places this user added ---- %>
+      <div class="d-flex align-items-center mb-1">
+        <h4 class="mb-0 me-auto">Places I've added</h4>
+        <a href="/listings/new" class="btn btn-danger btn-sm">Add a place</a>
       </div>
+      <% if (pendingCount) { %>
+        <p class="meta mb-3">
+          <%= pendingCount %> of these <%= pendingCount === 1 ? "is" : "are" %> still awaiting
+          review and <%= pendingCount === 1 ? "is" : "are" %> not public yet.
+        </p>
+      <% } else { %>
+        <p class="meta mb-3">Know a good mess, hostel or chai spot? Add it.</p>
+      <% } %>
 
       <% if (!listings.length) { %>
-        <div class="alert alert-light border text-center py-4">
-          <p class="mb-2">You haven't published any listings yet.</p>
-          <a href="/listings/new" class="btn btn-danger btn-sm">Create your first listing</a>
+        <div class="alert alert-light border text-center py-4 mb-5">
+          <p class="mb-2">You haven't added any places yet.</p>
+          <a href="/listings/new" class="btn btn-danger btn-sm">Add your first place</a>
         </div>
       <% } else { %>
-        <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 g-3">
+        <div class="row row-cols-lg-3 row-cols-md-2 row-cols-1 g-3 mb-5">
           <% for (let listing of listings) { %>
+            <% const icon = (categories.find(c => c.label === listing.category) || {}).icon || "fa-location-dot"; %>
             <div class="col">
-              <div class="card listing-card h-100">
+              <div class="card h-100">
                 <a href="/listings/<%= listing._id %>" class="profile-card-link">
-                  <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
-                    style="height: 12rem; object-fit: cover;">
+                  <% if (listing.image && listing.image.url) { %>
+                    <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
+                      style="height: 9rem; object-fit: cover;">
+                  <% } else { %>
+                    <div class="card-img-top no-photo-sm"><i class="fa-solid <%= icon %>"></i></div>
+                  <% } %>
                   <div class="card-body pb-2">
-                    <p class="card-text mb-1">
-                      <b><%= listing.title %></b>
+                    <p class="card-text mb-1"><b><%= listing.title %></b></p>
+                    <p class="card-text meta mb-2">
+                      <%= listing.category %>
+                      <% if (listing.distanceFromCampus != null) { %>
+                        &middot; <%= formatDistance(listing.distanceFromCampus) %>
+                      <% } %>
                     </p>
-                    <p class="card-text mb-1 text-muted" style="font-size: 0.85rem;">
-                      <%= listing.location %>, <%= listing.country %>
-                    </p>
-                    <p class="card-text mb-2">
-                      &#8377;<%= listing.price.toLocaleString("en-IN") %> / night
-                      <% if (listing.category) { %>
-                        <span class="category-badge ms-1"><%= listing.category %></span>
+                    <p class="card-text mb-0">
+                      <% if (listing.status === "pending") { %>
+                        <span class="badge text-bg-warning">Awaiting review</span>
+                      <% } else if (listing.status === "rejected") { %>
+                        <span class="badge text-bg-danger">Rejected</span>
+                      <% } else if (listing.verified) { %>
+                        <span class="badge text-bg-primary">Verified</span>
+                      <% } else { %>
+                        <span class="badge text-bg-secondary">Unverified</span>
                       <% } %>
                     </p>
                   </div>
@@ -211,7 +235,7 @@
                 <div class="card-body pt-0 d-flex gap-2">
                   <a href="/listings/<%= listing._id %>/edit" class="btn btn-sm btn-outline-dark">Edit</a>
                   <form method="post" action="/listings/<%= listing._id %>?_method=Delete"
-                    onsubmit="return confirm('Delete this listing? This also removes its reviews.');">
+                    onsubmit="return confirm('Delete this place?');">
                     <button class="btn btn-sm btn-outline-danger">Delete</button>
                   </form>
                 </div>
@@ -221,14 +245,14 @@
         </div>
       <% } %>
 
-      <h4 class="mt-5 mb-3">My reviews</h4>
-
+      <%# ---- Reviews written ---- %>
+      <h4 class="mb-3">My reviews</h4>
       <% if (!reviews.length) { %>
         <div class="alert alert-light border text-center py-4 mb-5">
-          You haven't reviewed any stays yet.
+          You haven't reviewed any place yet.
         </div>
       <% } else { %>
-        <div class="row row-cols-lg-2 row-cols-sm-1 g-3 mb-5">
+        <div class="row row-cols-lg-2 row-cols-1 g-3 mb-5">
           <% for (let review of reviews) { %>
             <% const reviewed = listingByReview.get(review._id.toString()); %>
             <div class="col">
@@ -240,7 +264,7 @@
                         <%= reviewed.title %>
                       </a>
                     <% } else { %>
-                      <span class="text-muted fst-italic">Listing no longer available</span>
+                      <span class="text-muted fst-italic">Place no longer listed</span>
                     <% } %>
                   </h6>
                   <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>

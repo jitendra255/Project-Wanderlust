@@ -1,8 +1,7 @@
 const User = require("../Models/user.js");
 const Listing = require("../Models/listing.js");
 const Review = require("../Models/review.js");
-const Booking = require("../Models/booking.js");
-const { todayUtc } = require("../utils/dates.js");
+const Enquiry = require("../Models/enquiry.js");
 
 module.exports.renderSignupForm = (req, res) => {
     res.render("./users/signup.ejs")
@@ -62,27 +61,29 @@ module.exports.profile = async (req, res) => {
         }
     }
 
-    // Stays this user has booked.
-    const trips = await Booking.find({ guest: userId })
-        .sort({ checkIn: -1 })
-        .populate("listing", "title image location country");
-
-    // Stays other people have booked on this user's listings.
-    const incomingBookings = await Booking.find({
-        listing: { $in: listings.map((listing) => listing._id) },
-        status: "confirmed",
-    })
-        .sort({ checkIn: 1 })
+    // Questions other students have asked about places this user added.
+    const enquiriesReceived = await Enquiry.find({ to: userId })
+        .sort({ createdAt: -1 })
         .populate("listing", "title")
-        .populate("guest", "username");
+        .populate("from", "username");
+
+    // Questions this user has asked about other people's places.
+    const enquiriesSent = await Enquiry.find({ from: userId })
+        .sort({ createdAt: -1 })
+        .populate("listing", "title")
+        .populate("to", "username");
+
+    // Submissions still waiting on a moderator, so the user knows why their
+    // place is not showing up yet.
+    const pendingCount = listings.filter((listing) => listing.status === "pending").length;
 
     res.render("./users/profile.ejs", {
         listings,
         reviews,
         listingByReview,
-        trips,
-        incomingBookings,
-        today: todayUtc(),
+        enquiriesReceived,
+        enquiriesSent,
+        pendingCount,
     });
 }
 

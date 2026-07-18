@@ -184,6 +184,32 @@
                     data-campus-lat="<%= campus.coordinates[1] %>" data-campus="<%= campus.shortName %>"></div>
             <% } %>
 
+            <%# Ask the student who added this - not the business, we have no
+                account for them. Pointless on imported entries, which nobody owns. %>
+            <% if (listing.source === "student" && listing.owner) { %>
+                <hr class="mt-4">
+                <h5>Ask about this place</h5>
+                <p class="place-meta mb-2">
+                    Goes to <strong>@<%= listing.owner.username %></strong>, who added it.
+                    You'll see the reply on your profile.
+                </p>
+                <% if (!currUser) { %>
+                    <p class="place-meta"><a href="/login">Log in</a> to ask a question.</p>
+                <% } else if (isOwner) { %>
+                    <p class="place-meta">You added this place, so there's nobody to ask.</p>
+                <% } else { %>
+                    <form action="/listings/<%= listing._id %>/enquiries" method="post" class="row g-2 mb-2">
+                        <div class="col-md-9">
+                            <input type="text" name="enquiry[message]" class="form-control"
+                                placeholder="e.g. Is the mess veg only? How is the water supply?" required>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-danger w-100">Ask</button>
+                        </div>
+                    </form>
+                <% } %>
+            <% } %>
+
             <hr class="mt-4">
 
             <% if (currUser) { %>

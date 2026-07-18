@@ -1,5 +1,4 @@
 const Listing = require("../Models/listing.js");
-const Booking = require("../Models/booking.js");
 const { geocodePlace } = require("../utils/geocode.js");
 const { distanceFromCampus } = require("../utils/campus.js");
 

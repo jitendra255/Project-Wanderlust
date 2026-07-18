@@ -8,7 +8,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") })
 const mongoose = require("mongoose")
 const Listing = require("../Models/listing.js")
 const Review = require("../Models/review.js")
-const Booking = require("../Models/booking.js");
+const Enquiry = require("../Models/enquiry.js");
 
 (async () => {
     const confirmed = process.argv.includes("--confirm");
@@ -22,7 +22,7 @@ const Booking = require("../Models/booking.js");
     const counts = {
         listings: await Listing.countDocuments(),
         reviews: await Review.countDocuments(),
-        bookings: await Booking.countDocuments(),
+        enquiries: await Enquiry.countDocuments(),
     };
 
     console.log("current contents:");
@@ -35,15 +35,15 @@ const Booking = require("../Models/booking.js");
         return;
     }
 
-    // Reviews and bookings all point at the demo listings, so they go too.
+    // Reviews and enquiries all point at listings, so they go too.
     await Review.deleteMany({});
-    await Booking.deleteMany({});
+    await Enquiry.deleteMany({});
     await Listing.deleteMany({});
 
     console.log("\ndeleted. remaining:");
     console.log(`  listings   ${await Listing.countDocuments()}`);
     console.log(`  reviews    ${await Review.countDocuments()}`);
-    console.log(`  bookings   ${await Booking.countDocuments()}`);
+    console.log(`  enquiries  ${await Enquiry.countDocuments()}`);
 
     await mongoose.disconnect();
 })().catch((err) => {

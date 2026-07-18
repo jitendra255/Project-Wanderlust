@@ -1,0 +1,162 @@
+<% layout("/layouts/boilerplate") -%>
+  <style>
+    .profile-header {
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .profile-avatar {
+      width: 4.5rem;
+      height: 4.5rem;
+      border-radius: 50%;
+      background-color: #fe424d;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .stat-pill {
+      background-color: #f8f9fa;
+      border-radius: 1rem;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      min-width: 6.5rem;
+    }
+
+    .stat-pill .stat-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .stat-pill .stat-label {
+      font-size: 0.75rem;
+      color: #6c757d;
+    }
+
+    .profile-card-link {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .category-badge {
+      background-color: #fe424d;
+      color: #fff;
+      font-size: 0.7rem;
+      border-radius: 1rem;
+      padding: 0.15rem 0.6rem;
+    }
+  </style>
+
+  <div class="row mt-4">
+    <div class="col-10 offset-1">
+
+      <div class="profile-header d-flex align-items-center gap-3 flex-wrap">
+        <div class="profile-avatar"><%= currUser.username.charAt(0) %></div>
+        <div class="me-auto">
+          <h3 class="mb-0"><%= currUser.username %></h3>
+          <p class="text-muted mb-0"><%= currUser.email %></p>
+        </div>
+        <div class="d-flex gap-2">
+          <div class="stat-pill">
+            <div class="stat-value"><%= listings.length %></div>
+            <div class="stat-label">Listing<%= listings.length === 1 ? "" : "s" %></div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-value"><%= reviews.length %></div>
+            <div class="stat-label">Review<%= reviews.length === 1 ? "" : "s" %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center mb-3">
+        <h4 class="mb-0 me-auto">My listings</h4>
+        <a href="/listings/new" class="btn btn-danger btn-sm">Add new listing</a>
+      </div>
+
+      <% if (!listings.length) { %>
+        <div class="alert alert-light border text-center py-4">
+          <p class="mb-2">You haven't published any listings yet.</p>
+          <a href="/listings/new" class="btn btn-danger btn-sm">Create your first listing</a>
+        </div>
+      <% } else { %>
+        <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 g-3">
+          <% for (let listing of listings) { %>
+            <div class="col">
+              <div class="card listing-card h-100">
+                <a href="/listings/<%= listing._id %>" class="profile-card-link">
+                  <img src="<%= listing.image.url %>" class="card-img-top" alt="<%= listing.title %>"
+                    style="height: 12rem; object-fit: cover;">
+                  <div class="card-body pb-2">
+                    <p class="card-text mb-1">
+                      <b><%= listing.title %></b>
+                    </p>
+                    <p class="card-text mb-1 text-muted" style="font-size: 0.85rem;">
+                      <%= listing.location %>, <%= listing.country %>
+                    </p>
+                    <p class="card-text mb-2">
+                      &#8377;<%= listing.price.toLocaleString("en-IN") %> / night
+                      <% if (listing.category) { %>
+                        <span class="category-badge ms-1"><%= listing.category %></span>
+                      <% } %>
+                    </p>
+                  </div>
+                </a>
+                <div class="card-body pt-0 d-flex gap-2">
+                  <a href="/listings/<%= listing._id %>/edit" class="btn btn-sm btn-outline-dark">Edit</a>
+                  <form method="post" action="/listings/<%= listing._id %>?_method=Delete"
+                    onsubmit="return confirm('Delete this listing? This also removes its reviews.');">
+                    <button class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+      <h4 class="mt-5 mb-3">My reviews</h4>
+
+      <% if (!reviews.length) { %>
+        <div class="alert alert-light border text-center py-4 mb-5">
+          You haven't reviewed any stays yet.
+        </div>
+      <% } else { %>
+        <div class="row row-cols-lg-2 row-cols-sm-1 g-3 mb-5">
+          <% for (let review of reviews) { %>
+            <% const reviewed = listingByReview.get(review._id.toString()); %>
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h6 class="card-title mb-1">
+                    <% if (reviewed) { %>
+                      <a href="/listings/<%= reviewed._id %>" class="profile-card-link fw-bold">
+                        <%= reviewed.title %>
+                      </a>
+                    <% } else { %>
+                      <span class="text-muted fst-italic">Listing no longer available</span>
+                    <% } %>
+                  </h6>
+                  <p class="starability-result card-text" data-rating="<%= review.rating %>"></p>
+                  <p class="card-text"><%= review.comment %></p>
+                  <% if (reviewed) { %>
+                    <form method="post"
+                      action="/listings/<%= reviewed._id %>/reviews/<%= review._id %>?_method=Delete"
+                      onsubmit="return confirm('Delete this review?');">
+                      <button class="btn btn-sm btn-outline-dark">Delete review</button>
+                    </form>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+    </div>
+  </div>

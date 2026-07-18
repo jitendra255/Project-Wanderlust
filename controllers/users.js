@@ -1,4 +1,6 @@
 const User = require("../Models/user.js");
+const Listing = require("../Models/listing.js");
+const Review = require("../Models/review.js");
 
 module.exports.renderSignupForm = (req, res) => {
     res.render("./users/signup.ejs")
@@ -37,6 +39,28 @@ module.exports.login = async (req, res) => {
         res.redirect("/login")
     }
 
+}
+
+module.exports.profile = async (req, res) => {
+    const userId = req.user._id;
+
+    const listings = await Listing.find({ owner: userId }).sort({ _id: -1 });
+    const reviews = await Review.find({ author: userId }).sort({ createdAt: -1 });
+
+    // Review has no back-reference to its listing, so resolve the mapping from
+    // the owning side instead of migrating the schema.
+    const reviewIds = reviews.map((review) => review._id);
+    const reviewedListings = await Listing.find({ reviews: { $in: reviewIds } })
+        .select("title image reviews");
+
+    const listingByReview = new Map();
+    for (const listing of reviewedListings) {
+        for (const reviewId of listing.reviews) {
+            listingByReview.set(reviewId.toString(), listing);
+        }
+    }
+
+    res.render("./users/profile.ejs", { listings, reviews, listingByReview });
 }
 
 module.exports.logout =(req, res, next) => {

@@ -292,6 +292,57 @@ describe("accounts", () => {
     });
 });
 
+describe("profile page", () => {
+    const loginAs = async (username, password) => {
+        const agent = request.agent(app);
+        await agent.post("/login").type("form").send({ username, password });
+        return agent;
+    };
+
+    test("redirects anonymous users to /login", async () => {
+        const res = await request(app).get("/profile");
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe("/login");
+    });
+
+    test("lists the listings the user owns", async () => {
+        const agent = await loginAs("tester", "testpass123");
+        const res = await agent.get("/profile");
+
+        expect(res.status).toBe(200);
+        expect(res.text).toContain("tester@example.com");
+        // The seed makes tester the owner of every listing.
+        expect(res.text).toContain("Historic Castle in Scotland");
+    });
+
+    test("shows a review the user wrote, linked back to its listing", async () => {
+        const agent = await loginAs("tester", "testpass123");
+
+        await agent
+            .post(`/listings/${castleId}/reviews`)
+            .type("form")
+            .send({ "review[rating]": 4, "review[comment]": "Draughty but magnificent" });
+
+        const res = await agent.get("/profile");
+        expect(res.text).toContain("Draughty but magnificent");
+        expect(res.text).toContain(`/listings/${castleId}`);
+    });
+
+    test("a brand new user sees both empty states", async () => {
+        const agent = request.agent(app);
+        await agent.post("/signup").type("form").send({
+            username: "emptyuser",
+            email: "empty@example.com",
+            password: "emptypass123",
+        });
+
+        const res = await agent.get("/profile");
+        expect(res.status).toBe(200);
+        expect(res.text).toContain("You haven't published any listings yet.");
+        expect(res.text).toContain("You haven't reviewed any stays yet.");
+    });
+});
+
 describe("error handling", () => {
     test("unknown routes render the 404 page", async () => {
         const res = await request(app).get("/no-such-page");
